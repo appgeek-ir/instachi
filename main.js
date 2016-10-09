@@ -57,17 +57,6 @@ function Execute(code,callback){
     script.parentNode.removeChild(script);
 }
 
-function RegisterRequest() {
-    "use strict";
-    var code = function () {
-        window.RegisterRequest();
-    };
-    var script = document.createElement('script');
-    script.textContent = '(' + code + ')()';
-    (document.head || document.documentElement).appendChild(script);
-    script.parentNode.removeChild(script);
-}
-
 function CheckPeriodically(testfn, fn, once) {
     once = once || 100;
     if (once == 0) {
@@ -84,7 +73,7 @@ function CheckPeriodically(testfn, fn, once) {
 }
 
 var instaext = {
-    GotoHomePage: function (callback) {
+    GotoHomePage: function (msg) {
         var profileLink = document.querySelector('#react-root>section>nav>div>div>div>div:nth-child(3)>div>div:nth-child(3)>a');
         if(profileLink!=null){
             var username;
@@ -93,35 +82,64 @@ var instaext = {
             CheckPeriodically(function(){
                 return window.location.pathname == '/'+ username +'/';
             },function(result){
-                callback({Result:result});
+                msg.callback({Result:result});
             });
         }else{
-            callback({Result:false});
+            msg.callback({Result:false});
         }
     },
-    GetFollowersCount: function (callback) {
-        var span = document.querySelector('#react-root>section>main>article>header>div:nth-child(2)>ul>li:nth-child(2)>span>span');
+    GetFollowersCount: function (msg) {
+        var span = document.querySelector('#react-root>section>main>article>header>div:nth-child(2)>ul>li:nth-child(2)>a>span');
         if(span!=null){
-            callback({Result:span.textContent});
+            msg.callback({Result:span.textContent});
         }else{
             //error
-            callback({Result:0});
+            msg.callback({Result:0});
         }
     },
-    GetFollowingsCount: function (callback) {
-        var span = document.querySelector('#react-root>section>main>article>header>div:nth-child(2)>ul>li:nth-child(3)>span>span');
+    GetFollowingsCount: function (msg) {
+        var span = document.querySelector('#react-root>section>main>article>header>div:nth-child(2)>ul>li:nth-child(3)>a>span');
         if(span!=null){
-            callback({Result:span.textContent});
+            msg.callback({Result:span.textContent});
         }else{
             //error
-            callback({Result:0});
+            msg.callback({Result:0});
         }
     },
-    GetFollowers: function () {
-        var elems = document.querySelectorAll('header ul>li');
-        elems[1].querySelector('span').click();
-        document.querySelectorAll('[role=dialog]');
+    OpenFollowersDialog: function (msg) {
+        var a = document.querySelector('#react-root>section>main>article>header>div:nth-child(2)>ul>li:nth-child(2)>a');
+        if(a!=null){
+            var query;
+            Execute(function(id){ window.RegisterRequest(id,'/query/');},function(result){ 
+                query = result; 
+            });
+            a.click();
+            CheckPeriodically(function(){
+                return document.querySelector('div>div[role=dialog]>div:nth-child(2)>div>div:nth-child(2)>ul>li:last-child>div.spiSpinner')==null&&
+                        document.querySelectorAll('div>div[role=dialog]>div:nth-child(2)>div>div:nth-child(2)>ul>li').length>0;
+            },function(result){
+                    msg.callback({Result:result,Query:query});
+            });
+        }else{
+            msg.callback({Result:false,Query:null});
+        }
+    },
+    GetNextFollowers: function(msg){
+        var container = document.querySelector('div>div[role=dialog]>div:nth-child(2)>div>div:nth-child(2)');
+        var query;
+        Execute(function(id){ window.RegisterRequest(id,'/query/');},function(result){ 
+                query = result; 
+        });
+        setTimeout(function(){
+            container.scrollTop = container.scrollHeight;
+            CheckPeriodically(function(){
+                    return query != undefined;
+                },function(result){
+                        msg.callback({Result:result,Query:query});
+                });
+        },100);
     }
+    
 };
 
 function executeFunctionByName(functionName, context , args ) {
@@ -131,7 +149,7 @@ function executeFunctionByName(functionName, context , args ) {
     for (var i = 0; i < namespaces.length; i++) {
         context = context[namespaces[i]];
     }
-    return context[func].apply(context, args);
+    return context[func].apply(context, [args]);
 }
 
 // listener
@@ -150,12 +168,15 @@ var port = chrome.runtime.connect({name: "page-"+pageId});
 //port.postMessage({joke: "Knock knock"});
 port.onMessage.addListener(function(msg) {
     if (msg.action !== undefined && instaext[msg.action] !== undefined) {
-            executeFunctionByName(msg.action, instaext, msg);
+        msg.callback = function(response){
+            port.postMessage({action:'callback.'+msg.callbackId,response:response});
+        }
+        executeFunctionByName(msg.action, instaext, msg);
     }
 });
 // Observe a specific DOM element:
-/*
+/** */
 observeDOM( document ,function(args){ 
     console.log('dom changed: ' + args);
 });
-*/
+

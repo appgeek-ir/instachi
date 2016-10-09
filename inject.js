@@ -9,8 +9,9 @@ XMLHttpRequest.prototype.send = function() {
          if (this.readyState == 4) {
              /* We are in response; do something, like logging or anything you want */
              //console.log("response:"+this.responseText);
-             if(this._callback!=undefined){
-                 this._callback(this.status,this.responseText);
+             if(this._id!=undefined){
+                 var obj = this;
+                 document.getElementById(this._id).innerText = JSON.stringify({status:this.status,responseText:this.responseText});
              }  
          }
 
@@ -26,14 +27,14 @@ var _open = XMLHttpRequest.prototype.open;
 XMLHttpRequest.prototype.open = function() {
     this._url = arguments.length>1?arguments[1]:null;
     if(requests[this._url]!==undefined){
-        this._callback = requests[this._url];
+        this._id = requests[this._url];
         delete requests[this._url];
     }
     _open.apply(this,arguments);
 }
 
-window.RegisterRequest = function(url,callback){
-    requests[url] = callback;
+window.RegisterRequest = function(id,url){
+    requests[url] = id;
 }
 
 window.GetViewerUsername = function(id){

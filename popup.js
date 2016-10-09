@@ -11,3 +11,7 @@ function hello() {
       document.getElementById("div").textContent = response.msg;
     });
 }
+var i =0;
+window.onload = function(){
+  document.getElementById("div").textContent = i++;
+}
