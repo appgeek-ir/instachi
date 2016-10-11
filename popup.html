@@ -1,16 +1,131 @@
 <!doctype html>
 <html>
-  <head>
-    <title>InstaExt</title>
-    <style>
-      body{ width:300px; }
-    </style>
-  </head>
-  <body>
-    <h1>InstaExt</h1>
+
+<head>
+  <meta charset="utf-8" />
+  <title>اینستاگو</title>
+  <link rel="stylesheet" href="pure-min.css" />
+  <link rel="stylesheet" href="style.css" />
+  
+  <script src="zepto.min.js"></script>
+  <script type="text/javascript" src="popup.js"></script>
+</head>
+
+<body>
+  <header>
+    <h3>اینستاگو</h3>
+  </header>
+
+  <section id="activation">
+    <h4>فعال سازی</h4>
+    <div class="alert alert-warning">برای فعال سازی افزونه ابتدا باید با حساب کاربری گوگل خود در براوزر کروم لاگین کرده باشید. برای مشاهده نحوه ورود <a href="#">اینجا کلیک نمایید</a>.</div>
+    <form class="pure-form pure-form-stacked">
+      <label for="serial">سریال افزونه</label>
+      <input id="serial" name="serial" class="ltr">
+      <button type="button" class="pure-button pure-button-primary">فعال سازی</button>
+      </fieldset>
+    </form>
+  </section>
+
+  <section id="login">
+    <div class="alert alert-warning">برای استفاده از افزونه ابتدا باید در سایت ایسنتاگرام لاگین کرده باشید!</div>
+  </section>
+
+  <section id="main">
+    <ul class="pure-menu-list">
+      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="#follow">فالو کردن کاربران</a></li>
+      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="#unfollow">آنفالو کردن کاربران</a></li>
+      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="#follow-requests">بازبینی درخواست های فالو</a></li>
+      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="#like">لایک کردن پست ها</a></li>
+      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="#comment">کامنت گذاشتن</a></li>
+      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="#setting">تنظیمات</a></li>
+      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="#about-us">درباره ما</a></li>
+    </ul>
+  </section>
+
+  <section id="follow">
+    <a class="pure-button button-return" href="#">بازگشت</a>
+    <form class="pure-form pure-form-stacked">
+      <fieldset>
+        <legend>فالو کردن کاربران</legend>
+
+        <label for="follow-pattern">روش فالو</label>
+        <select id="follow-pattern">
+            <option value="manual">از طریق صفحه جاری</option>
+            <option value="auto">از طریق فالورهای آماده</option>
+        </select>
+        <select id="follow-pattern-manual">
+            <option value="followers">فالور ها</option>
+            <option value="posts">لایک کنندگان و کامنت گذاران</option>
+        </select>
+        <select id="follow-pattern-auto" style="display:none;"></select>
+        <label for="follow-count">تعداد</label>
+        <input id="follow-count" type="number" placeholder="تعداد" value="100">
+
+        <label for="follow-not-frequent" class="pure-checkbox">
+            <input id="follow-not-frequent" type="checkbox"> فالو نکردن کاربرانی که قبلا یکبار فالو شده اند
+        </label>
+        <label for="follow-not-followers" class="pure-checkbox">
+            <input id="follow-not-followers" type="checkbox"> فالو نکردن کاربرانی که در حال حاظر فالور من هستند
+        </label>
+        <button type="button" class="pure-button pure-button-primary">اجرا</button>
+      </fieldset>
+    </form>
+  </section>
+
+  <section id="unfollow">
+    <a class="pure-button button-return" href="#">بازگشت</a>
+    <form class="pure-form pure-form-stacked">
+      <fieldset>
+        <legend>آنفالو کردن کاربران</legend>
+
+        <label for="unfollow-pattern">روش آنفالو</label>
+        <select id="unfollow-pattern">
+            <option value="manual">از لیست فالو شدگان در صفحه من</option>
+            <option value="auto">از لیست فالو شدگان خودکار</option>
+        </select>
+
+        <label for="unfollow-count">تعداد</label>
+        <input id="unfollow-count" type="number" placeholder="تعداد" value="100">
+
+        <label for="unfollow-not-followers" class="pure-checkbox">
+            <input id="unfollow-not-followers" type="checkbox"> آنفالو نکردن کاربرانی که فالور من هستند
+        </label>
+        <button type="button" class="pure-button pure-button-primary">اجرا</button>
+      </fieldset>
+    </form>
+  </section>
+
+  <section id="follow-requests">
+    <a class="pure-button button-return" href="#">بازگشت</a>
+    درخواست ها
+  </section>
+
+  <section id="like">
+    <a class="pure-button button-return" href="#">بازگشت</a>
+    لایک کردن
+  </section>
+
+  <section id="comment">
+    <a class="pure-button button-return" href="#">بازگشت</a>
+    نظردهی
+  </section>
+
+  <section id="setting">
+    <a class="pure-button button-return" href="#">بازگشت</a>
+    تنظیمات
+  </section>
+
+  <section id="about-us">
+    <a class="pure-button button-return" href="#">بازگشت</a>
+    درباره ما
+  </section>
+
+  <section>
     <div id="div">status</div>
     <button type="button" id="btn">Update</button>
-    
-    <script type="text/javascript" src="popup.js"></script>
-  </body>
+
+  </section>
+</body>
+
 </html>
