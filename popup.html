@@ -7,15 +7,40 @@
   <link rel="stylesheet" href="pure-min.css" />
   <link rel="stylesheet" href="style.css" />
   
-  <script src="zepto.min.js"></script>
+  <script type="text/javascript" src="zepto.min.js"></script>
+  <script type="text/javascript" src="dot.min.js"></script>
   <script type="text/javascript" src="popup.js"></script>
+  <style>
+.loader {
+    border: 4px solid #f3f3f3; /* Light grey */
+    border-top: 4px solid #3498db; /* Blue */
+    border-bottom: 4px solid #3498db;
+    border-radius: 50%;
+    width: 25px;
+    height: 25px;
+    animation: spin 2s linear infinite;
+    position:absolute;
+    left: 10px;
+    top: 10px;
+    display:none;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+  </style>
 </head>
 
 <body>
   <header>
-    <h3>اینستاگو</h3>
+    <h3>اینستاگو</h3> 
+    <div class="loader"></div>
   </header>
-
+  <section id="error">
+    <div class="alert alert-danger"></div>
+  </section>
   <section id="activation">
     <h4>فعال سازی</h4>
     <div class="alert alert-warning">برای فعال سازی افزونه ابتدا باید با حساب کاربری گوگل خود در براوزر کروم لاگین کرده باشید. برای مشاهده نحوه ورود <a href="#">اینجا کلیک نمایید</a>.</div>
@@ -31,47 +56,9 @@
     <div class="alert alert-warning">برای استفاده از افزونه ابتدا باید در سایت ایسنتاگرام لاگین کرده باشید!</div>
   </section>
 
-  <section id="main">
-    <ul class="pure-menu-list">
-      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="#follow">فالو کردن کاربران</a></li>
-      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="#unfollow">آنفالو کردن کاربران</a></li>
-      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="#follow-requests">بازبینی درخواست های فالو</a></li>
-      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="#like">لایک کردن پست ها</a></li>
-      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="#comment">کامنت گذاشتن</a></li>
-      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="#setting">تنظیمات</a></li>
-      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="#about-us">درباره ما</a></li>
-    </ul>
-  </section>
+  <section id="main" class="active"></section>
 
-  <section id="follow">
-    <a class="pure-button button-return" href="#">بازگشت</a>
-    <form class="pure-form pure-form-stacked">
-      <fieldset>
-        <legend>فالو کردن کاربران</legend>
-
-        <label for="follow-pattern">روش فالو</label>
-        <select id="follow-pattern">
-            <option value="manual">از طریق صفحه جاری</option>
-            <option value="auto">از طریق فالورهای آماده</option>
-        </select>
-        <select id="follow-pattern-manual">
-            <option value="followers">فالور ها</option>
-            <option value="posts">لایک کنندگان و کامنت گذاران</option>
-        </select>
-        <select id="follow-pattern-auto" style="display:none;"></select>
-        <label for="follow-count">تعداد</label>
-        <input id="follow-count" type="number" placeholder="تعداد" value="100">
-
-        <label for="follow-not-frequent" class="pure-checkbox">
-            <input id="follow-not-frequent" type="checkbox"> فالو نکردن کاربرانی که قبلا یکبار فالو شده اند
-        </label>
-        <label for="follow-not-followers" class="pure-checkbox">
-            <input id="follow-not-followers" type="checkbox"> فالو نکردن کاربرانی که در حال حاظر فالور من هستند
-        </label>
-        <button type="button" class="pure-button pure-button-primary">اجرا</button>
-      </fieldset>
-    </form>
-  </section>
+  <section id="follow"></section>
 
   <section id="unfollow">
     <a class="pure-button button-return" href="#">بازگشت</a>
@@ -121,11 +108,65 @@
     درباره ما
   </section>
 
+  <section id="tasks">
+    tasks
+  </section>
+  
   <section>
     <div id="div">status</div>
     <button type="button" id="btn">Update</button>
 
   </section>
-</body>
 
+</body>
+<script type="text/template" id="main-template">
+    <ul class="pure-menu-list">
+      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="followCtrl">فالو کردن کاربران</a></li>
+      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="unfollowCtrl">آنفالو کردن کاربران</a></li>
+      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="followRequestsCtrl">بازبینی درخواست های فالو</a></li>
+      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="likeCtrl">لایک کردن پست ها</a></li>
+      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="commentCtrl">کامنت گذاشتن</a></li>
+      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="settingCtrl">تنظیمات</a></li>
+      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="aboutUsCtrl">درباره ما</a></li>
+    </ul>
+</script>
+<script type="text/template" id="follow-template">
+   <a class="pure-button button-return" href="#">بازگشت</a>
+    <form class="pure-form pure-form-stacked">
+      <fieldset>
+        <legend>فالو کردن کاربران</legend>
+
+        <label for="follow-pattern">روش فالو</label>
+        <select id="follow-pattern">
+            <option value="manual">از طریق صفحه جاری</option>
+            <option value="auto">از طریق فالورهای آماده</option>
+        </select>
+        <select id="follow-pattern-manual">
+            <option value="followers">فالور ها</option>
+            <option value="posts">لایک کنندگان و کامنت گذاران</option>
+        </select>
+        <select id="follow-pattern-auto" style="display:none;"></select>
+        <label for="follow-count">تعداد</label>
+        <input id="follow-count" type="number" placeholder="تعداد" value="100">
+
+        <label for="follow-not-frequent" class="pure-checkbox">
+            <input id="follow-not-frequent" type="checkbox"> فالو نکردن کاربرانی که قبلا یکبار فالو شده اند
+        </label>
+        <label for="follow-not-followers" class="pure-checkbox">
+            <input id="follow-not-followers" type="checkbox"> فالو نکردن کاربرانی که در حال حاظر فالور من هستند
+        </label>
+
+        <label for="follow-task-start">شروع کار</label>
+        <select id="follow-task-start">
+            <option value="manual">به صورت دستی</option>
+            <option value="auto">به صورت خودکار</option>
+        </select>
+
+        <button type="button" class="pure-button pure-button-primary">اجرا</button>
+      </fieldset>
+    </form>
+</script>
+<script type="text/template" id="tasks-template">
+وظیفه
+</script>
 </html>

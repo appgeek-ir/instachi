@@ -1,3 +1,4 @@
+//تزریق اسکریپت به صفحه اصلی
 var s = document.createElement('script');
 s.src = chrome.extension.getURL('inject.js');
 s.onload = function () {
@@ -5,6 +6,7 @@ s.onload = function () {
 };
 (document.head || document.documentElement).appendChild(s);
 
+// تابع نظارت بر دام
 var observeDOM = (function () {
     var MutationObserver = window.MutationObserver || window.WebKitMutationObserver,
         eventListenerSupported = window.addEventListener;
@@ -29,35 +31,39 @@ var observeDOM = (function () {
     }
 })();
 
+// بافر
 var buffer = document.createElement('ul');
-buffer.id= "_instaext";
+buffer.id = "_instaext";
 document.documentElement.appendChild(buffer);
 
-function guidGenerator() {
-    var S4 = function() {
-       return (((1+Math.random())*0x10000)|0).toString(16).substring(1);
+function idGenerator() {
+    var S4 = function () {
+        return (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
     };
-    return (S4()+S4()+"-"+S4()+"-"+S4()+"-"+S4()+"-"+S4()+S4()+S4());
+    return (S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() + S4() + S4());
 }
 
-function Execute(code,callback){
+//اجرای دستور در صفحه
+function Execute(code, callback,args) {
     "use strict";
-    var id = guidGenerator();
-     var li =  document.createElement('li');
+    var id = idGenerator();
+    var li = document.createElement('li');
     li.id = id;
     document.getElementById('_instaext').appendChild(li);
-    observeDOM( li ,function(args){ 
+    observeDOM(li, function (args) {
         //console.log('dom changed: ' + args);
         callback(li.innerText);
         li.remove();
     });
+    args = args || {};
     var script = document.createElement('script');
-    script.textContent = '(' + code + ')("'+id+'")';
+    script.textContent = '(' + code + ')("' + id + '",'+ JSON.stringify(args) +')';
     (document.head || document.documentElement).appendChild(script);
     script.parentNode.removeChild(script);
 }
 
-function CheckPeriodically(testfn, fn, once) {
+//اجرای عملیات بر اساس محقق شدن شرط
+function checkPeriodically(testfn, fn, once) {
     once = once || 100;
     if (once == 0) {
         fn(false);
@@ -66,117 +72,247 @@ function CheckPeriodically(testfn, fn, once) {
             fn(true);
         } else {
             setTimeout(function () {
-                CheckPeriodically(testfn, fn, once - 1);
+                checkPeriodically(testfn, fn, once - 1);
             }, 100);
         }
     }
 }
 
-var instaext = {
-    GotoHomePage: function (msg) {
-        var profileLink = document.querySelector('#react-root>section>nav>div>div>div>div:nth-child(3)>div>div:nth-child(3)>a');
-        if(profileLink!=null){
-            var username;
-            Execute(function(id){ window.GetViewerUsername(id);},function(result){ username = result; });
-            profileLink.click();
-            CheckPeriodically(function(){
-                return window.location.pathname == '/'+ username +'/';
-            },function(result){
-                msg.callback({Result:result});
-            });
-        }else{
-            msg.callback({Result:false});
-        }
-    },
-    GetFollowersCount: function (msg) {
-        var span = document.querySelector('#react-root>section>main>article>header>div:nth-child(2)>ul>li:nth-child(2)>a>span');
-        if(span!=null){
-            msg.callback({Result:span.textContent});
-        }else{
-            //error
-            msg.callback({Result:0});
-        }
-    },
-    GetFollowingsCount: function (msg) {
-        var span = document.querySelector('#react-root>section>main>article>header>div:nth-child(2)>ul>li:nth-child(3)>a>span');
-        if(span!=null){
-            msg.callback({Result:span.textContent});
-        }else{
-            //error
-            msg.callback({Result:0});
-        }
-    },
-    OpenFollowersDialog: function (msg) {
-        var a = document.querySelector('#react-root>section>main>article>header>div:nth-child(2)>ul>li:nth-child(2)>a');
-        if(a!=null){
-            var query;
-            Execute(function(id){ window.RegisterRequest(id,'/query/');},function(result){ 
-                query = result; 
-            });
-            a.click();
-            CheckPeriodically(function(){
-                return document.querySelector('div>div[role=dialog]>div:nth-child(2)>div>div:nth-child(2)>ul>li:last-child>div.spiSpinner')==null&&
-                        document.querySelectorAll('div>div[role=dialog]>div:nth-child(2)>div>div:nth-child(2)>ul>li').length>0;
-            },function(result){
-                    msg.callback({Result:result,Query:query});
-            });
-        }else{
-            msg.callback({Result:false,Query:null});
-        }
-    },
-    GetNextFollowers: function(msg){
-        var container = document.querySelector('div>div[role=dialog]>div:nth-child(2)>div>div:nth-child(2)');
-        var query;
-        Execute(function(id){ window.RegisterRequest(id,'/query/');},function(result){ 
-                query = result; 
-        });
-        setTimeout(function(){
-            container.scrollTop = container.scrollHeight;
-            CheckPeriodically(function(){
-                    return query != undefined;
-                },function(result){
-                        msg.callback({Result:result,Query:query});
-                });
-        },100);
-    }
-    
+function isFunction(obj) {
+  return !!(obj && obj.constructor && obj.call && obj.apply);
 };
 
-function executeFunctionByName(functionName, context , args ) {
-    //var args = [].slice.call(arguments).splice(2);
-    var namespaces = functionName.split(".");
-    var func = namespaces.pop();
-    for (var i = 0; i < namespaces.length; i++) {
-        context = context[namespaces[i]];
-    }
-    return context[func].apply(context, [args]);
+function clog(){
+  for(var i in arguments){
+    console.log(arguments[i]);
+  }
 }
 
-// listener
-/*
-chrome.runtime.onMessage.addListener(
-    function (request, sender, sendResponse) {
-        if (request.action !== undefined && instaext[request.action] !== undefined) {
-            request.params = request.params || [];
-            request.params.splice(0, 0, sendResponse);
-            executeFunctionByName(request.action, instaext, request.params);
+// اتصال به کدهای پشتی
+var pageId = idGenerator();
+var port;
+
+setTimeout(function(){
+    port = chrome.runtime.connect({
+        name: "page." + pageId
+    });
+    port.onMessage.addListener(function (msg) {
+        if (msg.action !== undefined && controller[msg.action] !== undefined) {
+            if (controller[msg.action] !== undefined) {
+                controller[msg.action](msg);
+            }
         }
     });
-*/
-var pageId = guidGenerator();
-var port = chrome.runtime.connect({name: "page-"+pageId});
-//port.postMessage({joke: "Knock knock"});
-port.onMessage.addListener(function(msg) {
-    if (msg.action !== undefined && instaext[msg.action] !== undefined) {
-        msg.callback = function(response){
-            port.postMessage({action:'callback.'+msg.callbackId,response:response});
+},1000);
+
+//ارسال پاسخ
+function postCallback(id, msg) {
+    msg.action = "callback." + id;
+    port.postMessage(msg);
+}
+
+//کنترلر صفحه
+var controller = {
+    /*
+     * رفتن به صفحه پروفایل کاربر
+     * صفحه مجددا لود می شود
+     * username : نام کاربر
+     */
+    gotoProfile: function (msg) {
+        clog('go to profile request:', msg);
+        window.location.href = '/' + msg.username + '/';
+    },
+
+    /*
+     * رفتن به صفحه اصلی
+     * id: شناسه بازگشت
+     */
+    gotoHomePage: function (msg) {
+        var profileLink = document.querySelector('#react-root>section>nav>div>div>div>div:nth-child(3)>div>div:nth-child(3)>a');
+        if (profileLink != null) {
+            var username;
+            Execute(function (id) {
+                window.getViewerUsername(id);
+            }, function (result) {
+                username = result;
+            });
+            profileLink.click();
+            checkPeriodically(function () {
+                return window.location.pathname == '/' + username + '/';
+            }, function (result) {
+                postCallback(msg.callbackId, {
+                    result: true
+                });
+            });
+        } else {
+            postCallback(msg.callbackId, {
+                result: false
+            });
         }
-        executeFunctionByName(msg.action, instaext, msg);
+    },
+
+    getFollowersCount: function (msg) {
+        var span = document.querySelector('#react-root>section>main>article>header>div:nth-child(2)>ul>li:nth-child(2)>a>span');
+        if (span != null) {
+            msg.callback({
+                Result: span.textContent
+            });
+        } else {
+            //error
+            msg.callback({
+                Result: 0
+            });
+        }
+    },
+    getFollowingsCount: function (msg) {
+        var span = document.querySelector('#react-root>section>main>article>header>div:nth-child(2)>ul>li:nth-child(3)>a>span');
+        if (span != null) {
+            msg.callback({
+                Result: span.textContent
+            });
+        } else {
+            //error
+            msg.callback({
+                Result: 0
+            });
+        }
+    },
+
+    /**
+     * باز کردن پنجره فالورهای صفحه
+     * id: //
+     */
+    openFollowers: function (msg) {
+        clog('open followers requested',msg);
+        var a = document.querySelector('#react-root>section>main>article>header>div:nth-child(2)>ul>li:nth-child(2)>a');
+        if (a != null) {
+            var query;
+            Execute(function (id) {
+                console.log(window);
+                window.registerRequest(id, '/query/');
+            }, function (result) {
+                query = JSON.parse(result);
+                clog('query result selected:',query);
+            });
+            a.click();
+            checkPeriodically(function () {
+                return document.querySelector('div>div[role=dialog]>div:nth-child(2)>div>div:nth-child(2)>ul>li:last-child>div.spiSpinner') == null &&
+                    document.querySelectorAll('div>div[role=dialog]>div:nth-child(2)>div>div:nth-child(2)>ul>li').length > 0;
+            }, function (result) {
+                clog('condition is ok');
+                postCallback(msg.callbackId, {
+                    result: result,
+                    response: query
+                });
+            });
+        } else {
+            postCallback(msg.callbackId, {
+                result: false
+            });
+        }
+    },
+    /**
+    * لود بیشتر فالورها بوسیله اسکرول
+    * id: //
+    */
+    loadMoreFollowers: function (msg) {
+        var container = document.querySelector('div>div[role=dialog]>div:nth-child(2)>div>div:nth-child(2)');
+        var query;
+        Execute(function (id) {
+            window.registerRequest(id, '/query/');
+        }, function (result) {
+            //امکان وجود خطا
+            query = JSON.parse(result);
+        });
+        setTimeout(function () {
+            container.scrollTop = container.scrollHeight;
+            checkPeriodically(function () {
+                return query != undefined;
+            }, function (result) {
+                postCallback(msg.callbackId, {
+                    result: result,
+                    response: query
+                });
+            });
+        }, 100);
+    },
+    /**
+     * فالو کردن کاربر از لیست باز شده
+     * callbackId: //
+     * userId: شناسه کاربر
+     * username: نام کاربر
+     */
+    followFromList: function(msg){
+        var userLink = document.querySelector('div>div[role=dialog]>div:nth-child(2)>div>div:nth-child(2)>ul>li a[title="'+msg.username+'"]');
+        if(userLink!=null){
+            var button = userLink.parentElement.parentElement.parentElement.parentElement.querySelector('button');
+            if(button!=null){
+                Execute(function (id,args) {
+                    window.registerRequest(id, '/web/friendships/'+args.userId+'/follow/');
+                }, function (result) {
+                    //امکان وجود خطا
+                    clog('follow from list completed:',result);
+                    query = JSON.parse(result);
+                    postCallback(msg.callbackId,{result:true,response:query});
+                },{userId:msg.userId});
+                button.click();
+            }else{
+                clog('follow from list:button not found');
+                postCallback(msg.callbackId,{result:false});
+            }
+        }else{
+            clog('follow from list:user not found');
+            postCallback(msg.callbackId,{result:false});
+        }
+    },
+    getCurrentPage: function(msg){
+        clog('get current page request:', msg)
+        var profileLink = document.querySelector('span>section>main>article>header>div:nth-child(2)>div>h1');
+        if(profileLink!=null){
+            clog('get current page:found: ', profileLink.innerText);
+            postCallback(msg.callbackId,{result:true,username:profileLink.innerText});
+        }else{
+            clog('get current page:not found:');
+            postCallback(msg.callbackId,{result:false});
+        }
+    },
+    /**
+     * دریافت اطلاعات کاربر لاگین کرده
+     */
+    getCurrentUser: function(msg){
+        clog('get current user request:', msg)
+        Execute(function (id) {
+            window.getViewer(id);
+        }, function (result) {
+            //امکان وجود خطا
+            user = JSON.parse(result);
+            postCallback(msg.callbackId,{result:true,user:user});
+        });
+    }
+
+};
+
+/**
+ * جلوگیری از لود شدن تصاویر
+ */
+/*
+observeDOM( document ,function(args){ 
+    for(var i in args){
+        args[i].addedNodes.forEach(function(value){
+            if(isFunction(value.querySelectorAll)){
+                value.querySelectorAll('img').forEach(function(img){
+                    img.removeAttribute('src');
+                });
+            }
+        });
     }
 });
-// Observe a specific DOM element:
-/** */
-observeDOM( document ,function(args){ 
-    console.log('dom changed: ' + args);
+*/
+/*
+document.querySelectorAll('script').forEach(function(node){
+    var src= node.getAttribute('src');
+    if(node.innerText.indexOf('connect.facebook.net')!=-1 ||(src!=null&&src.indexOf('facebook.net')!=-1) ){
+        node.remove();
+    }
 });
-
+*/

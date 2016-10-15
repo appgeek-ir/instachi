@@ -11,7 +11,7 @@ XMLHttpRequest.prototype.send = function() {
              //console.log("response:"+this.responseText);
              if(this._id!=undefined){
                  var obj = this;
-                 document.getElementById(this._id).innerText = JSON.stringify({status:this.status,responseText:this.responseText});
+                 document.getElementById(this._id).innerText = JSON.stringify({status:this.status,data:JSON.parse(this.responseText)});
              }  
          }
 
@@ -19,13 +19,13 @@ XMLHttpRequest.prototype.send = function() {
              callback.apply(this, arguments);
          }
     }
-
     _send.apply(this, arguments);
 }
 
 var _open = XMLHttpRequest.prototype.open;
 XMLHttpRequest.prototype.open = function() {
     this._url = arguments.length>1?arguments[1]:null;
+    console.log(this._url);
     if(requests[this._url]!==undefined){
         this._id = requests[this._url];
         delete requests[this._url];
@@ -33,11 +33,17 @@ XMLHttpRequest.prototype.open = function() {
     _open.apply(this,arguments);
 }
 
-window.RegisterRequest = function(id,url){
+window.registerRequest = function(id,url){
     requests[url] = id;
 }
 
-window.GetViewerUsername = function(id){
+window.getViewerUsername = function(id){
     var username = window._sharedData.config.viewer.username;
     document.getElementById(id).innerText = username;
 }
+window.getViewer = function(id){
+    var user = window._sharedData.config.viewer;
+    document.getElementById(id).innerText  = JSON.stringify(user);
+}
+
+console.log('file injected!');
