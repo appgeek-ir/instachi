@@ -10,8 +10,11 @@ XMLHttpRequest.prototype.send = function() {
              /* We are in response; do something, like logging or anything you want */
              //console.log("response:"+this.responseText);
              if(this._id!=undefined){
-                 var obj = this;
-                 document.getElementById(this._id).innerText = JSON.stringify({status:this.status,data:JSON.parse(this.responseText)});
+                 var data = {};
+                 if(this.status==200){
+                     data = JSON.parse(this.responseText);
+                 }
+                 document.getElementById(this._id).innerText = JSON.stringify({status:this.status,data:data});
              }  
          }
 
@@ -44,6 +47,16 @@ window.getViewerUsername = function(id){
 window.getViewer = function(id){
     var user = window._sharedData.config.viewer;
     document.getElementById(id).innerText  = JSON.stringify(user);
+}
+
+window.getProfile = function(id){
+    if(window._sharedData.entry_data.ProfilePage==undefined){
+        document.getElementById(id).innerText  = 'null';
+    }else{
+        var user = window._sharedData.entry_data.ProfilePage[0].user;
+        document.getElementById(id).innerText  = JSON.stringify(user);
+    }
+
 }
 
 console.log('file injected!');

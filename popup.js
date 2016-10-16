@@ -188,9 +188,56 @@ window['followCtrl'] = {
   }
 }
 
+/**
+ * کنترلر آنفالو
+ */
+window['unfollowCtrl'] = {
+
+  /**
+   * راه اندازی
+   */
+  init: function () {
+
+    showTemplate('unfollow');
+    var $main = $('section#main'),
+      that = this;
+    $main.find('a.button-return').on('click', function (e) {
+      e.preventDefault();
+      loadCtrl('mainCtrl');
+    });
+    $main.find('button').on('click', function(e){
+      that.createTask();
+    });
+
+  },
+
+  /**
+   * تولید وظیفه آنفالو
+   */
+  createTask: function(){
+      msg = {
+        action: 'createTask',
+        type: 'Unfollow',
+        pattern: $('#unfollow-pattern').val(),
+        checkFollowStatus: $('#unfollow-not-followers').is(':checked'),
+        startType: $('#unfollow-task-start').val(),
+        order: $('#unfollow-order').val(),
+        count: $('#unfollow-count').val()
+      };
+
+    clog('create unfollow task request');
+    postMessage(msg, $.proxy(this.createTaskResponse, this));
+  },
+  createTaskResponse: function(msg){
+    clog('create unfollow task response:',msg);
+    showTemplate('tasks');
+  }
+};
+
 window['tasksCtrl'] = {
 
-  init: function () {
+
+  init: function(){
 
   },
 
