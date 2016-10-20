@@ -81,3 +81,30 @@
       position: absolute;
       left: 10px;
     }
+
+.progress{
+    height: 30px;
+    border:1px solid silver;
+    padding: 3px;
+    margin-bottom: 5px;
+}
+
+.bar{
+    text-align: center;
+    width:33%;
+    background-color: #337ab7;
+    color:#fff;
+    height: 100%;
+    line-height: 30px;
+}
+
+#main h3{
+    margin-top:0;
+}
+
+.running-task{
+    padding:5px;
+    padding-bottom:10px;
+    border-bottom:1px solid #e1e1e1;
+    margin-bottom:10px;
+}

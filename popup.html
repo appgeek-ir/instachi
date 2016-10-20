@@ -94,7 +94,22 @@
   </section>
 
 </body>
+<script type="text/template" id="running-task-template">
+    <div class="running-task">
+        <h3>{{=it.type}}: {{=it.step}}</h3>
+        {{? it.wait }}
+        <div class="alert alert-danger">بلاک شدید! سعی مجدد {{=it.wait}}</div>
+        {{?}}
+        <div class="progress"><div class="bar" style="width:{{=it.progress}}%">{{=it.progress}}%</div></div>
+        <table>
+        {{~it.states :value:index}}
+        <tr><td><b>{{=value.name}}</b>: </td><td>{{=value.value}}</td></tr>
+        {{~}}
+        </table>
+    </div>
+</script>
 <script type="text/template" id="main-template">
+
     <ul class="pure-menu-list">
       <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="followCtrl">فالو کردن کاربران</a></li>
       <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="unfollowCtrl">آنفالو کردن کاربران</a></li>
@@ -111,28 +126,22 @@
       <fieldset>
         <legend>فالو کردن کاربران</legend>
 
-        <label for="follow-pattern">روش فالو</label>
-        <select id="follow-pattern">
-            <option value="manual">از طریق صفحه جاری</option>
-            <option value="auto">از طریق فالورهای آماده</option>
+        <label for="pattern">روش جمع کردن اطلاعات کاربران</label>
+        <select id="pattern">
+            <option value="followers">فالور های صفحه جاری</option>
+            <option value="posts">لایک ها و کامنت های صفحه جاری</option>
+            <option value="tag">تگ</option>
         </select>
-        <select id="follow-pattern-manual">
-            <option value="followers">فالور ها</option>
-            <option value="posts">لایک کنندگان و کامنت گذاران</option>
-        </select>
-        <select id="follow-pattern-auto" style="display:none;"></select>
-        <label for="follow-count">تعداد</label>
-        <input id="follow-count" type="number" placeholder="تعداد" value="100">
 
-        <label for="follow-not-frequent" class="pure-checkbox">
-            <input id="follow-not-frequent" type="checkbox"> فالو نکردن کاربرانی که قبلا یکبار فالو شده اند
-        </label>
-        <label for="follow-not-followers" class="pure-checkbox">
-            <input id="follow-not-followers" type="checkbox"> فالو نکردن کاربرانی که در حال حاظر فالور من هستند
+        <label for="count">تعداد</label>
+        <input id="count" type="number" placeholder="تعداد" value="100">
+
+        <label for="check-history" class="pure-checkbox">
+            <input id="check-history" type="checkbox"> فالو نکردن کاربرانی که قبلا یکبار فالو شده اند
         </label>
 
-        <label for="follow-task-start">شروع کار</label>
-        <select id="follow-task-start">
+        <label for="start-type">شروع کار</label>
+        <select id="start-type">
             <option value="manual">به صورت دستی</option>
             <option value="auto">به صورت خودکار</option>
         </select>

@@ -59,4 +59,25 @@ window.getProfile = function(id){
 
 }
 
+/**
+* دریافت پست های صفحه
+*/
+window.getPosts = function(id){
+    if(window._sharedData.entry_data.ProfilePage==undefined){
+        document.getElementById(id).innerText  = 'null';
+    }else{
+        var media = window._sharedData.entry_data.ProfilePage[0].user.media;
+        document.getElementById(id).innerText  = JSON.stringify(media);
+    }
+
+}
+
+/**
+* دریافت اطلاعات اشتراکی صفحه
+*/
+window.getSharedData = function(id){
+    var sharedData = window._sharedData;
+    document.getElementById(id).innerText  = JSON.stringify(sharedData);
+}
+
 console.log('file injected!');
