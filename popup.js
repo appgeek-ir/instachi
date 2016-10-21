@@ -126,22 +126,34 @@ var mainCtrl = {
         clog('get task response:' , msg);
         $('.running-task').remove();
         if(msg.result){
+            $('section#main').find('ul').hide();
+            $('.button-error').on('click',function(e){
+                postMessage({
+                   action:'stopTask'
+                });
+            });
             if(msg.task.waitUntil!=undefined){
                 var wait = new Date(Date.parse(msg.task.waitUntil))- new Date();
                 if(wait>0){
                     var min = Math.floor(wait/60000);
                     var sec = Math.floor((wait%60000)/1000);
-                    msg.task.wait = min.toString() +" دقیقه " +  sec.toString() + " ثانیه ";
+                    msg.task.wait = (min>0? (min.toString() +" دقیقه "):"") +  sec.toString() + " ثانیه ";
                 }
             }
             var html = getTemplate('running-task',msg.task);
             $(html).insertBefore('ul');
             setTimeout($.proxy(this.getCurrentTask,this),500);
         }else{
+            $('section#main').find('ul').show();
             $('section#main').find('a').on('click', function (e) {
                 e.preventDefault();
                 var $this = $(this);
                 loadCtrl($this.prop('target'));
+            });
+            $('section#main').find('#donation').on('click',function(e){
+                e.preventDefault();
+                var newURL = "http://www.reyhansoft.com/instachi/donate-us";
+                chrome.tabs.create({ url: newURL });
             });
         }
     }

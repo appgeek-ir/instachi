@@ -1,110 +1,165 @@
-    * {
-      font-family: tahoma;
-      font-size: 13px;
-      line-height: 1.7em;
-    }
-    
-    body {
-      direction: rtl;
-      width: 300px;
-      background-color: #fefefe;
-      padding: 0;
-      text-align: right;
-    }
-    
-    a{
-      text-decoration: none;
-    }
+@font-face {
+    font-family: 'yekan';
+    src: url('fonts/web_Yekan.woff') format('woff')
+}
 
-    .ltr {
-      direction: ltr;
-    }
-    
-    .alert-warning {
-      color: #8a6d3b;
-      background-color: #fcf8e3;
-      border-color: #faebcc;
-    }
-    .alert-danger {
-      color: #a94442;
-      background-color: #f2dede;
-      border-color: #ebccd1;
-    }
-    .alert-info {
-        color: #31708f;
-        background-color: #d9edf7;
-        border-color: #bce8f1;
-    }
-    .alert {
-      padding: 15px;
-      margin-bottom: 10px;
-      border: 1px solid transparent;
-      border-radius: 4px;
-      text-align: justified;
-    }
-    .alert:last-child{
-      margin-bottom: 0;
-    }
+* {
+    font-family: yekan, tahoma;
+    font-size: 13px;
+    line-height: 1.7em;
+}
 
-    header {
-      background-color: #1f8dd6;
-      padding: 5px;
-      color: #fff;
-    }
-    
-    header h3 {
-      margin: 10px 0;
-    }
-    
-    section {
-      padding: 10px;
-      display: none;
-    }
-    
-    section.active{
-      display: block;
-    }
+body {
+    direction: rtl;
+    width: 300px;
+    background-color: #fefefe;
+    padding: 0;
+    text-align: right;
+}
 
-    section h4 {
-      margin: 5px;
-    }
+a {
+    text-decoration: none;
+}
 
-    .pure-button-full{
-      width:100%;
-    }
-    .pure-form select {
-      height: 2.55em;
-      width:100%;
-    }
+.ltr {
+    direction: ltr;
+}
 
-    .button-return{
-      position: absolute;
-      left: 10px;
-    }
+.alert-warning {
+    color: #8a6d3b;
+    background-color: #fcf8e3;
+    border-color: #faebcc;
+}
 
-.progress{
+.alert-danger {
+    color: #a94442;
+    background-color: #f2dede;
+    border-color: #ebccd1;
+}
+
+.alert-info {
+    color: #31708f;
+    background-color: #d9edf7;
+    border-color: #bce8f1;
+}
+
+.alert {
+    padding: 15px;
+    margin-bottom: 10px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    text-align: justified;
+}
+
+.alert:last-child {
+    margin-bottom: 0;
+}
+
+header {
+    background-color: #1f8dd6;
+    padding: 5px;
+    color: #fff;
+}
+
+header h3 {
+    margin: 10px 0;
+}
+
+section {
+    padding: 10px;
+    display: none;
+}
+
+section.active {
+    display: block;
+}
+
+section h4 {
+    margin: 5px;
+}
+
+.pure-button-full {
+    width: 100%;
+}
+
+.pure-form select {
+    height: 2.55em;
+    width: 100%;
+}
+
+.button-return {
+    position: absolute;
+    left: 10px;
+}
+
+.progress {
     height: 30px;
-    border:1px solid silver;
+    border: 1px solid silver;
     padding: 3px;
     margin-bottom: 5px;
 }
 
-.bar{
+.bar {
     text-align: center;
-    width:33%;
+    width: 33%;
     background-color: #337ab7;
-    color:#fff;
+    color: #fff;
     height: 100%;
     line-height: 30px;
 }
 
-#main h3{
-    margin-top:0;
+header h2 {
+    margin: 5px;
+    font-size: initial;
 }
 
-.running-task{
-    padding:5px;
-    padding-bottom:10px;
-    border-bottom:1px solid #e1e1e1;
-    margin-bottom:10px;
+#main h2 {
+    margin: 5px;
+    font-size: initial;
+}
+
+.running-task {
+    padding: 5px;
+}
+
+.button-success,
+.button-error,
+.button-warning,
+.button-secondary {
+    color: white;
+    border-radius: 4px;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+}
+
+.button-success {
+    background: rgb(28, 184, 65);
+    /* this is a green */
+}
+
+.button-error {
+    background: rgb(202, 60, 60);
+    /* this is a maroon */
+}
+
+.button-warning {
+    background: rgb(223, 117, 20);
+    /* this is an orange */
+}
+
+.button-secondary {
+    background: rgb(66, 184, 221);
+    /* this is a light blue */
+}
+
+div.action-bar {
+    text-align: left;
+}
+.pure-menu-list a
+{
+    font-size:14px;
+}
+.pure-menu-list a img {
+    width: 24px;
+    vertical-align: middle;
+    margin-left: 14px;
 }

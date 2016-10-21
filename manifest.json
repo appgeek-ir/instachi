@@ -1,29 +1,33 @@
 {
-  "manifest_version": 2,
+    "manifest_version": 2,
 
-  "name": "InstaExt",
-  "description": "This extension ....",
-  "version": "1.0",
-
-  "page_action": {
-   "default_icon": "icon.png",
-   "default_popup": "popup.html"
-  },
-  "permissions": [
+    "name": "Instachi",
+    "description": "This extension ....",
+    "version": "0.1",
+    "icons": {
+        "16": "images/icon.png",
+        "48": "images/icon.png",
+        "128": "images/icon.png"
+    },
+    "page_action": {
+        "default_icon": "images/icon.png",
+        "default_popup": "popup.html"
+    },
+    "permissions": [
     "*://www.instagram.com/",
     "webRequest",
     "webRequestBlocking",
     "storage",
     "unlimitedStorage"
    ],
-   "background": {
-    "persistent": true,
-    "scripts": ["zepto.min.js","dexie.min.js","bg.js"]
-  },
-   "content_scripts" : [{
-        "matches" : [ "*://www.instagram.com/*"],
-        "js" : ["main.js"]
+    "background": {
+        "persistent": true,
+        "scripts": ["zepto.min.js", "dexie.min.js", "bg.js"]
+    },
+    "content_scripts": [{
+        "matches": ["*://www.instagram.com/*"],
+        "js": ["main.js"]
     }],
-   "web_accessible_resources": ["inject.js"],
-   "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'"
+    "web_accessible_resources": ["inject.js"],
+    "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'"
 }

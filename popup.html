@@ -40,7 +40,7 @@
 
 <body>
   <header>
-    <h3>اینستاگو</h3>
+      <h2> اینستاچی </h2>
     <div class="loader"></div>
   </header>
   <section id="error">
@@ -63,35 +63,6 @@
 
   <section id="main" class="active"></section>
 
-  <section id="follow-requests">
-    <a class="pure-button button-return" href="#">بازگشت</a> درخواست ها
-  </section>
-
-  <section id="like">
-    <a class="pure-button button-return" href="#">بازگشت</a> لایک کردن
-  </section>
-
-  <section id="comment">
-    <a class="pure-button button-return" href="#">بازگشت</a> نظردهی
-  </section>
-
-  <section id="setting">
-    <a class="pure-button button-return" href="#">بازگشت</a> تنظیمات
-  </section>
-
-  <section id="about-us">
-    <a class="pure-button button-return" href="#">بازگشت</a> درباره ما
-  </section>
-
-  <section id="tasks">
-    tasks
-  </section>
-
-  <section>
-    <div id="div">status</div>
-    <button type="button" id="btn">Update</button>
-
-  </section>
 
 </body>
 <script type="text/template" id="running-task-template">
@@ -106,18 +77,17 @@
         <tr><td><b>{{=value.name}}</b>: </td><td>{{=value.value}}</td></tr>
         {{~}}
         </table>
+        <div class="action-bar">
+        <button class="button-error pure-button">توقف عملیات</button>
+        </div>
     </div>
 </script>
 <script type="text/template" id="main-template">
 
     <ul class="pure-menu-list">
-      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="followCtrl">فالو کردن کاربران</a></li>
-      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="unfollowCtrl">آنفالو کردن کاربران</a></li>
-      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="followRequestsCtrl">بازبینی درخواست های فالو</a></li>
-      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="likeCtrl">لایک کردن پست ها</a></li>
-      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="commentCtrl">کامنت گذاشتن</a></li>
-      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="settingCtrl">تنظیمات</a></li>
-      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="aboutUsCtrl">درباره ما</a></li>
+      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="followCtrl"><img src="images/follow.png" /> فالو کردن کاربران</a></li>
+      <li class="pure-menu-item"><a href="#" class="pure-menu-link" target="unfollowCtrl"><img src="images/unfollow.png" />آنفالو کردن کاربران</a></li>
+      <li class="pure-menu-item"><a href="#" class="pure-menu-link" id="donation"><img src="images/donation.png" /> از ما حمایت کنید!</a></li>
     </ul>
 </script>
 <script type="text/template" id="follow-template">
