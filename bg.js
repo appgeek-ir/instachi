@@ -221,17 +221,17 @@ chrome.runtime.onConnect.addListener(function (port) {
 
 function showFollowHistories(userId) {
     var db = getDb(userId);
-    var $histories = $('#histories>tbody');
+    var $histories = $('#histories');
     $histories.children('*').remove();
     db.followHistories
         .orderBy('datetime')
-        .and(x => $.inArray(x.status,['following','requested'])!=-1)
+        //.and(x => $.inArray(x.status,['following','requested'])!=-1)
         //.reverse()
-        .limit(10)
+        //.limit(10)
         .toArray(function (items) {
             for(var i in items){
                 var item = items[i];
-                $histories.append('<tr><td>'+item.id+'</td><td>'+item.username+'</td><td>'+ new Date(item.datetime).toISOString() +'</td><td>'+ item.status +'</td></tr>');
+                $histories.append('<span>'+item.id+','+item.username+','+ item.datetime +','+ item.status +';</span>');
             }
         });
 }
@@ -261,7 +261,7 @@ function update(userId){
 }
 
 Zepto(function () {
-    $('body').append('<div id="container"><div><ul id="dbs"></ul></div><div><table id="histories"><thead></thead><tbody></tbody></table></div></div>');
+    $('body').append('<div id="container"><div><ul id="dbs"></ul></div><div id="histories"></div></div>');
 
     var $container = $('#container');
 
@@ -887,6 +887,7 @@ followTask.prototype.getStatus = function () {
  * اتمام وظیفه فالو
  */
 followTask.prototype.completed = function () { /* nothing */ };
+
 // خط لوله اجرای دستور
 var pipeline = function (port, onCompleted) {
     this.steps = new Array();

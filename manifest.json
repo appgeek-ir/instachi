@@ -2,8 +2,9 @@
     "manifest_version": 2,
 
     "name": "Instachi",
-    "description": "This extension ....",
+    "description": "مدیریت خودکار اینستاگرام: فالو و آنفالو",
     "version": "0.1",
+    "update_url": "http://localhost/update.xml",
     "icons": {
         "16": "images/icon.png",
         "48": "images/icon.png",
