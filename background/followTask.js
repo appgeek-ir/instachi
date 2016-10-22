@@ -310,7 +310,9 @@ followTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
 
             clog('followed: skip from follow');
             var status = msg.user.followed_by_viewer ? 'following' : 'requested';
-            //رد شدن از آنفالو
+            // پرش از فالو
+            // قبلن بررسی کردیم که کاربر درون لیست نباشد
+            // پس کاربر نیست و باید این را ذخیره کنیم
             updateFollowHistory(this.tabId, {
                 id: msg.user.id,
                 username: msg.user.username,
@@ -348,7 +350,7 @@ followTask.prototype.followFromProfileResponse = function (pipeline, msg) {
                     id: currentUser.userId,
                     username: currentUser.username,
                     status: msg.response.data.result,
-                    datetime: new Date().toISOString()
+                    datetime: new Date().getTime()
                 });
                 pipeline.next(1, 1);
             } else {
@@ -360,7 +362,7 @@ followTask.prototype.followFromProfileResponse = function (pipeline, msg) {
             var waitUntil = new Date();
             waitUntil.setSeconds(waitUntil.getSeconds()+ rnd * 60);
             this.state.waitUntil = waitUntil;
-            setTimeout($.proxy(function(){this.state.waitUntil = undefined;},this),rnd * 60 * 1000);
+            setTimeout($.proxy(this.endWaiting,this),rnd * 60 * 1000);
             //بلاک شدن یا عدم اتصال به اینترنت و ..
             pipeline.previous(3, rnd * 60);
         }
@@ -370,6 +372,13 @@ followTask.prototype.followFromProfileResponse = function (pipeline, msg) {
         pipeline.next();
         return;
     }
+}
+
+/**
+* پایان دادن به صبر
+*/
+followTask.prototype.endWaiting = function(){
+    this.state.waitUntil = undefined;
 }
 
 //.........................
@@ -458,7 +467,7 @@ followTask.prototype.followRequested = function (pipeline, msg) {
                     id: currentUser.userId,
                     username: currentUser.username,
                     status: msg.response.data.result,
-                    datetime: new Date().toISOString()
+                    datetime: new Date().getTime()
                 });
 
                 if (this.state.count < 1) {

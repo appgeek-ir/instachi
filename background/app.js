@@ -133,17 +133,27 @@ function updateFollowHistory(tabId, history) {
                 db.followHistories.get(history.id, function (item) {
                     clog('item:', item);
                     if (item == undefined) {
+                        // در صورت وارد نشده بودن زمان آن را برابرحال قرار می دهیم
+                        if(history.datetime==undefined){
+                            history.datetime = new Date().getTime();
+                        }
                         db.followHistories.add(history).then(function () {
                             clog('history inserted');
                         }).catch(function (err) {
                             clog('update follow history: db error: ' + err);
                         });
                     } else {
-                        if (item.datetime == undefined) {
-                            history.datetime = new Date().toISOString();
-                        } else {
-                            history.datetime = item.datetime;
+                        // در صورت تغییر وضعیت زمان هم تغییر می کند
+                        if(item.status!=history.status){
+                            history.datetime = new Date().getTime();
+                        }else{
+                            if (item.datetime == undefined) {
+                                history.datetime = new Date().getTime();
+                            } else {
+                                history.datetime = item.datetime;
+                            }
                         }
+
                         db.followHistories.put(history).then(function () {
                             clog('history updated!');
                         }).catch(function (err) {
@@ -214,14 +224,40 @@ function showFollowHistories(userId) {
     var $histories = $('#histories>tbody');
     $histories.children('*').remove();
     db.followHistories
-        .reverse()
+        .orderBy('datetime')
+        //.and(x => $.inArray(x.status,['following','requested'])!=-1)
+        //.reverse()
         .limit(10)
-        .sortBy('datetime', function (items) {
+        .toArray(function (items) {
             for(var i in items){
                 var item = items[i];
-                $histories.append('<tr><td>'+item.id+'</td><td>'+item.username+'</td><td>'+ item.datetime +'</td><td>'+ item.status +'</td></tr>');
+                $histories.append('<tr><td>'+item.id+'</td><td>'+item.username+'</td><td>'+ new Date(item.datetime).toISOString() +'</td><td>'+ item.status +'</td></tr>');
             }
         });
+}
+
+function update(userId){
+
+    var db = getDb(userId);
+    db.followHistories
+      .toArray(function (histories) {
+        var count= histories.length;
+
+        for(var i in histories){
+            clog(count--);
+            var history = histories[i];
+            var datetime = Date.parse(history.datetime);
+            if(!isNaN(datetime)){
+                history.datetime = datetime;
+                db.followHistories.put(history).then(function () {
+                                clog('history updated!');
+                            }).catch(function (err) {
+                                clog('update follow history: db error: ' + err);
+                            });
+            }
+        }
+    });
+
 }
 
 Zepto(function () {
@@ -234,12 +270,20 @@ Zepto(function () {
         for (var i in names) {
             var $li = $('<li></li>');
             var $a = $('<a href="#">' + names[i] + '</a>');
+            var $upd = $('<a href="#"> update </a>');
+            $upd.on('click',function(e){
+                e.preventDefault();
+                var $this = $(this)
+                update($this.data('id').split('_')[1]);
+            }).data('id',names[i]);
+
             $a.on('click', function (e) {
                 e.preventDefault();
                 var $this = $(this)
                 showFollowHistories($this.data('id').split('_')[1]);
             }).data('id',names[i]);
             $a.appendTo($li);
+            $upd.appendTo($li);
             $li.appendTo($ul);
         }
     });

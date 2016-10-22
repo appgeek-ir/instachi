@@ -133,17 +133,27 @@ function updateFollowHistory(tabId, history) {
                 db.followHistories.get(history.id, function (item) {
                     clog('item:', item);
                     if (item == undefined) {
+                        // در صورت وارد نشده بودن زمان آن را برابرحال قرار می دهیم
+                        if(history.datetime==undefined){
+                            history.datetime = new Date().getTime();
+                        }
                         db.followHistories.add(history).then(function () {
                             clog('history inserted');
                         }).catch(function (err) {
                             clog('update follow history: db error: ' + err);
                         });
                     } else {
-                        if (item.datetime == undefined) {
-                            history.datetime = new Date().toISOString();
-                        } else {
-                            history.datetime = item.datetime;
+                        // در صورت تغییر وضعیت زمان هم تغییر می کند
+                        if(item.status!=history.status){
+                            history.datetime = new Date().getTime();
+                        }else{
+                            if (item.datetime == undefined) {
+                                history.datetime = new Date().getTime();
+                            } else {
+                                history.datetime = item.datetime;
+                            }
                         }
+
                         db.followHistories.put(history).then(function () {
                             clog('history updated!');
                         }).catch(function (err) {
@@ -214,14 +224,40 @@ function showFollowHistories(userId) {
     var $histories = $('#histories>tbody');
     $histories.children('*').remove();
     db.followHistories
-        .reverse()
+        .orderBy('datetime')
+        //.and(x => $.inArray(x.status,['following','requested'])!=-1)
+        //.reverse()
         .limit(10)
-        .sortBy('datetime', function (items) {
+        .toArray(function (items) {
             for(var i in items){
                 var item = items[i];
-                $histories.append('<tr><td>'+item.id+'</td><td>'+item.username+'</td><td>'+ item.datetime +'</td><td>'+ item.status +'</td></tr>');
+                $histories.append('<tr><td>'+item.id+'</td><td>'+item.username+'</td><td>'+ new Date(item.datetime).toISOString() +'</td><td>'+ item.status +'</td></tr>');
             }
         });
+}
+
+function update(userId){
+
+    var db = getDb(userId);
+    db.followHistories
+      .toArray(function (histories) {
+        var count= histories.length;
+
+        for(var i in histories){
+            clog(count--);
+            var history = histories[i];
+            var datetime = Date.parse(history.datetime);
+            if(!isNaN(datetime)){
+                history.datetime = datetime;
+                db.followHistories.put(history).then(function () {
+                                clog('history updated!');
+                            }).catch(function (err) {
+                                clog('update follow history: db error: ' + err);
+                            });
+            }
+        }
+    });
+
 }
 
 Zepto(function () {
@@ -234,16 +270,25 @@ Zepto(function () {
         for (var i in names) {
             var $li = $('<li></li>');
             var $a = $('<a href="#">' + names[i] + '</a>');
+            var $upd = $('<a href="#"> update </a>');
+            $upd.on('click',function(e){
+                e.preventDefault();
+                var $this = $(this)
+                update($this.data('id').split('_')[1]);
+            }).data('id',names[i]);
+
             $a.on('click', function (e) {
                 e.preventDefault();
                 var $this = $(this)
                 showFollowHistories($this.data('id').split('_')[1]);
             }).data('id',names[i]);
             $a.appendTo($li);
+            $upd.appendTo($li);
             $li.appendTo($ul);
         }
     });
 });
+
 /**
  * سازنده وظیفه فالو
  */
@@ -556,7 +601,9 @@ followTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
 
             clog('followed: skip from follow');
             var status = msg.user.followed_by_viewer ? 'following' : 'requested';
-            //رد شدن از آنفالو
+            // پرش از فالو
+            // قبلن بررسی کردیم که کاربر درون لیست نباشد
+            // پس کاربر نیست و باید این را ذخیره کنیم
             updateFollowHistory(this.tabId, {
                 id: msg.user.id,
                 username: msg.user.username,
@@ -594,7 +641,7 @@ followTask.prototype.followFromProfileResponse = function (pipeline, msg) {
                     id: currentUser.userId,
                     username: currentUser.username,
                     status: msg.response.data.result,
-                    datetime: new Date().toISOString()
+                    datetime: new Date().getTime()
                 });
                 pipeline.next(1, 1);
             } else {
@@ -606,7 +653,7 @@ followTask.prototype.followFromProfileResponse = function (pipeline, msg) {
             var waitUntil = new Date();
             waitUntil.setSeconds(waitUntil.getSeconds()+ rnd * 60);
             this.state.waitUntil = waitUntil;
-            setTimeout($.proxy(function(){this.state.waitUntil = undefined;},this),rnd * 60 * 1000);
+            setTimeout($.proxy(this.endWaiting,this),rnd * 60 * 1000);
             //بلاک شدن یا عدم اتصال به اینترنت و ..
             pipeline.previous(3, rnd * 60);
         }
@@ -616,6 +663,13 @@ followTask.prototype.followFromProfileResponse = function (pipeline, msg) {
         pipeline.next();
         return;
     }
+}
+
+/**
+* پایان دادن به صبر
+*/
+followTask.prototype.endWaiting = function(){
+    this.state.waitUntil = undefined;
 }
 
 //.........................
@@ -704,7 +758,7 @@ followTask.prototype.followRequested = function (pipeline, msg) {
                     id: currentUser.userId,
                     username: currentUser.username,
                     status: msg.response.data.result,
-                    datetime: new Date().toISOString()
+                    datetime: new Date().getTime()
                 });
 
                 if (this.state.count < 1) {
@@ -1157,40 +1211,43 @@ var taskService = {
  * وظیفه آنفالو کردن کاربران
  */
 var unfollowTask = function (args) {
-  this.id = idGenerator();
-  this.state = args;
-  this.status = 'Stop';
-  this.state.unfollows = 0;
-  this.state.profileViews = 0;
-  if (this.state.currentStep == undefined) {
-    this.state.users = new Array();
-    if (this.state.pattern == 'auto') {
-      this.state.currentStep = 'fetchFollowHistories';
-    } else {
-      this.state.currentStep = 'fetchFromFollowings';
+    this.id = idGenerator();
+    this.state = args;
+    this.status = 'Stop';
+    if (this.state.currentStep == undefined) {
+        this.state.users = new Array();
+        this.state.unfollowsCount = 0;
+        this.state.profileViewsCount = 0;
+        this.state.retakeRequestsCount = 0;
+        this.state.fetchedUsersCount = 0;
+        this.state.progress;
+        if (this.state.pattern == 'auto') {
+            this.state.currentStep = 'fetchFollowHistories';
+        } else {
+            this.state.currentStep = 'fetchFromFollowings';
+        }
     }
-  }
 };
 
 unfollowTask.prototype.persist = function (status) {
-  persistTask(undefined, {
-    id: this.id,
-    status: status,
-    state: this.state
-  });
+    persistTask(undefined, {
+        id: this.id,
+        status: status,
+        state: this.state
+    });
 };
 
 unfollowTask.prototype.start = function (tab) {
-  this.tab = tab;
-  this.tabId = tab.id;
-  this.port = tab.port;
-  if (this.status != 'Start') {
-    this.status = 'Start';
-    clog('start task', this);
-    this[this.state.currentStep]();
-  } else {
-    clog('task is already started: ', this);
-  }
+    this.tab = tab;
+    this.tabId = tab.id;
+    this.port = tab.port;
+    if (this.status != 'Start') {
+        this.status = 'Start';
+        clog('start task', this);
+        this[this.state.currentStep]();
+    } else {
+        clog('task is already started: ', this);
+    }
 };
 
 unfollowTask.prototype.completed = function () { /* nothing */ };
@@ -1199,209 +1256,200 @@ unfollowTask.prototype.completed = function () { /* nothing */ };
  * استخراج کاربران از لیست
  */
 unfollowTask.prototype.fetchFromFollowings = function () {
-  clog('fetch from followings list');
-  this.tab.onConnect($.proxy(function () {
-    clog('connect after going to home');
-    this.tab.removeOnConnect();
-    this.pipeline = this.tab.createPipeline($.proxy(function () {
-      clog('unfollow completed!');
-      this.completed(this);
-    }, this));
-    this.pipeline.register('openFollowings', {}, $.proxy(this.fetchFollowingsCycle, this))
-      .start();
-  }, this));
-  this.tab.postMessage({
-    action: 'gotoHomePage'
-  });
-};
+    clog('fetch from followings list');
+    this.tab.onConnect($.proxy(function () {
+        clog('connect after going to home');
+        this.tab.removeOnConnect();
 
-unfollowTask.prototype.fetchFollowingsCycle = function (pipeline, msg) {
-  clog('fetch followings response:', msg);
-  if (msg.result) {
-    if (msg.response.status == 200) {
-      var data = msg.response.data;
-      if (data.status == 'ok') {
-        for (var i in data.follows.nodes) {
-          if (this.state.order == 'none' && this.state.users.length >= this.state.count) {
-            break;
-          }
-          var node = data.follows.nodes[i];
-          this.state.users.push({
-            userId: node.id,
-            username: node.username
-          });
-          updateFollowHistory(this.tabId, {
-            id: node.id,
-            username: node.username,
-            status: 'following'
-          });
-        }
-        var end = false;
-        if (this.state.order == 'none' && this.state.users.length >= this.state.count) {
-          //end of pipe
-          end = true;
-          clog('desired count reached', this.state.users);
-        } else {
-          if (data.follows.page_info.has_next_page) {
-            pipeline.register('loadMoreFollowings', {}, $.proxy(this.fetchFollowingsCycle, this));
-            clog('more records are comming!');
-          } else {
-            clog('no more records available!');
-            // end of cycle
-            end = true;
-          }
-        }
-        if (end) {
-          if (this.state.order == 'none') {
-            while (this.state.users.length > 0) {
-              var user = this.state.users.pop();
-              pipeline.register('unfollowFromList', user, $.proxy(this.unfollowResponse, this));
-            }
-          } else if (this.state.order == 'oldest') {
-            var count = 0;
-            while (count <= this.state.count && count <= this.state.users.length) {
-              var user = this.state.users.pop();
-              pipeline.register('unfollowFromList', user, $.proxy(this.unfollowResponse, this));
-              count++;
-            }
-          } else {
-            var count = 0,
-              selectedUsers = {};
-            while (count <= this.state.count && count <= this.state.users.length) {
-              while (true) {
-                var rnd = Math.floor(Math.random() * this.state.users.length);
-                if (selectedUsers[rnd] == undefined) {
-                  selectedUsers[rnd] = true;
-                  var user = this.state.users[rnd];
-                  pipeline.register('unfollowFromList', user, $.proxy(this.unfollowResponse, this));
-                  break;
-                }
-              }
-              count++;
-            }
-          }
-          delete selectedUsers;
-          this.state.users = [];
-        }
-        pipeline.next(1, 1);
-      } else {
-        clog('response error');
-        pipeline.retry(60);
-      }
-    } else {
-      clog('server error');
-      pipeline.retry(60);
-    }
-  } else {
-    clog('can not fetch followings');
-    pipeline.retry(60);
-  }
+        // ایجاد پایپ لاین
+        this.pipeline = this.tab.createPipeline($.proxy(function () {
+            clog('unfollow completed!');
+            this.completed(this);
+        }, this));
+
+        // باز کردن فالوینگ ها
+        this.pipeline.register('openFollowings', {}, $.proxy(this.fetchFollowingsCycle, this))
+            .start();
+
+    }, this));
+
+    // ؤفتن به صفحه خانگی
+    this.tab.postMessage({
+        action: 'gotoHomePage'
+    });
 };
 
 /**
- * پاسخ آنفالو
- */
-unfollowTask.prototype.unfollowResponse = function (pipeline, msg) {
-  clog('unfollow response:', msg);
-  if (msg.result) {
-    if (msg.response.status == 200) {
-      // کاربر با موفقیت تمام شد
-      updateFollowHistory(this.tabId, {
-        id: msg.user.userId,
-        username: msg.user.username,
-        status: 'unfollowed'
-      });
-      pipeline.next(1, 1);
+* چرخه استخراج فالوینگ ها
+*/
+unfollowTask.prototype.fetchFollowingsCycle = function (pipeline, msg) {
+    clog('fetch followings response:', msg);
+    if (msg.result) {
+        if (msg.response.status == 200) {
+            var data = msg.response.data;
+            if (data.status == 'ok') {
+
+                // روند پیشرفت
+                this.state.fetchedUsersCount += data.follows.nodes.length;
+                this.state.progress = this.state.fetchedUsersCount / data.follows.count * 100;
+
+                //استخراج کاربران
+                for (var i in data.follows.nodes) {
+                    var node = data.follows.nodes[i];
+                    updateFollowHistory(this.tabId, {
+                        id: node.id,
+                        username: node.username,
+                        status: 'following'
+                    });
+                }
+
+                // بررسی صفحه بعدی
+                if (data.follows.page_info.has_next_page) {
+                    clog('more records are comming!');
+                    pipeline.register('loadMoreFollowings', {}, $.proxy(this.fetchFollowingsCycle, this));
+                    pipeline.next(1, 1);
+                } else {
+                    clog('no more records available!');
+                    pipeline.end();
+                }
+
+            } else {
+                clog('response error');
+                //خطا و پایان
+                pipeline.next();
+            }
+        } else {
+            clog('server error');
+            //خطا و پایان
+            pipeline.next();
+        }
     } else {
-      clog('server error:');
-      pipeline.retry(60);
+        clog('can not fetch followings');
+        //خطا و پایان
+        pipeline.next();
     }
-  } else {
-    //خطا
-    clog('can not unfollow user');
-    pipeline.retry(60);
-  }
 };
 
 /**
  * استخراج کاربران از تاریخچه
  */
 unfollowTask.prototype.fetchFollowHistories = function () {
+
+    // ایجاد پایپ لاین
     this.pipeline = this.tab.createPipeline($.proxy(function () {
-      clog('tasl completed',this.state);
-      this.completed(this);
+        clog('task completed', this.state);
+        this.completed(this);
     }, this));
-  this.tab.postMessage({
-    action: 'getCurrentUser'
-  }, $.proxy(function (msg) {
-    if (msg.result) {
-      var db = getDb(msg.user.id);
-      db.followHistories
-        .where('status')
-        .equals('following')
-        .limit(this.state.count)
-        .reverse()
-        .sortBy('datetime',$.proxy(function (items) {
-          for(var i in items){
-              var followHistory = items[i];
-          clog('histry',followHistory);
-          this.pipeline
-              .register($.proxy(function () {
-                  this.state.currentUser = followHistory;
-                  this.tab.onConnect($.proxy(function () {
-                      clog('connect after going to profile');
-                      this.state.profileViews++;
-                      this.tab.removeOnConnect();
-                      this.pipeline.port = this.tab.port;
-                      this.pipeline.next();
-                  }, this));
-                  this.pipeline.next();
-              }, this))
 
-          .register('gotoProfile', {
-            username: followHistory.username
-          })
+    var createPipeline = $.proxy(function (followHistory) {
+        this.pipeline
+            .register($.proxy(function () {
+                this.state.currentUser = followHistory;
+                this.tab.onConnect($.proxy(function () {
+                    clog('connect after going to profile');
+                    this.state.profileViewsCount++;
+                    this.tab.removeOnConnect();
+                    this.pipeline.port = this.tab.port;
+                    this.pipeline.next();
+                }, this));
+                this.pipeline.next();
+            }, this))
+            .register('gotoProfile', {
+                username: followHistory.username
+            })
+            .register('getProfileInfo', {}, $.proxy(this.getProfileInfoResponse, this))
+            .register('unfollowFromPage', {
+                userId: followHistory.id,
+                username: followHistory.username
+            }, $.proxy(this.unfollowFromPageResponse, this));
+    }, this);
 
-          .register('getProfileInfo',{},$.proxy(this.getProfileInfoResponse,this))
-          .register('unfollowFromPage',{userId:followHistory.id,username:followHistory.username},$.proxy(this.unfollowFromPageResponse,this));
-          }
-          this.pipeline.start();
-        },this));
+    this.tab.postMessage({
+        action: 'getCurrentUser'
+    }, $.proxy(function (msg) {
+        if (msg.result) {
+            var db = getDb(msg.user.id);
+            var equals = ['following'];
+            if (this.state.checkRequests) {
+                equals.push('requested');
+            }
 
-    } else {
-      //خطا
-    }
-  },this));
+            db.followHistories
+                .orderBy('datetime')
+                .and(x => $.inArray(x.status,equals)!=-1)
+                .reverse()
+                .limit(this.state.count)
+                .toArray($.proxy(function (items) {
+                    for (var i in items) {
+                        clog('history', items[i]);
+                        createPipeline(items[i]);
+                    }
+                    this.pipeline.start();
+                }, this));
+
+        } else {
+            //خطا
+            this.pipeline.end();
+        }
+    }, this));
 };
 
-unfollowTask.prototype.getProfileInfoResponse = function(pipeline,msg){
-    clog('get profile info reponse',msg);
-   if(msg.result){
-        if(msg.user.followed_by_viewer){
-            if(this.state.checkFollowStatus){
-                if(!msg.user.follows_viewer){
+/**
+ * دریافت اطلاعات پروفایل
+ */
+unfollowTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
+    this.state.progress = pipeline.index/pipeline.steps.length *100;
+    clog('get profile info reponse', msg);
+    if (msg.result) {
+        // بررسی فالو شدن بوسیله ما
+        if (msg.user.followed_by_viewer) {
+            if (this.state.checkFollowStatus) {
+                if (!msg.user.follows_viewer) {
                     clog('daoos found');
+                    this.state.currentUser.currentState = 'following';
                     pipeline.next();
-                }else{
+                } else {
                     clog('user currently follow me!');
+                    if (this.state.currentUser.status == 'requested') {
+                        updateFollowHistory(this.tabId, {
+                            id: msg.user.id,
+                            username: msg.user.username,
+                            status: 'following'
+                        });
+                    }
                     pipeline.next(2);
                 }
-            }else{
-                 clog('dont check follow status')
-                 pipeline.next();
+            } else {
+                clog('dont check follow status');
+                this.state.currentUser.currentState = 'following';
+                pipeline.next();
             }
-        }else{
+        } else if (msg.user.requested_by_viewer) {
+            if (this.state.checkRequests) {
+                // پس گرفتن فالو
+                clog('not accepted request');
+                this.state.currentUser.currentState = 'requested';
+                pipeline.next();
+            } else {
+                updateFollowHistory(this.tabId, {
+                    id: msg.user.id,
+                    username: msg.user.username,
+                    status: 'requested'
+                });
+                pipeline.next(2);
+            }
 
+        } else {
             clog('not followed: skip from follow');
             //رد شدن از آنفالو
             updateFollowHistory(this.tabId, {
                 id: msg.user.id,
                 username: msg.user.username,
                 status: 'unfollowed'
-             });
+            });
             pipeline.next(2);
         }
-    }else{
+    } else {
         clog('can not access: skip from follow');
         // کاربر وجود نداشت
         updateFollowHistory(this.tabId, {
@@ -1413,26 +1461,74 @@ unfollowTask.prototype.getProfileInfoResponse = function(pipeline,msg){
     }
 };
 
-unfollowTask.prototype.unfollowFromPageResponse = function(pipeline,msg){
-    clog('unfollow response',msg);
- if(msg.result){
-     if(msg.response.status == 200){
-         this.state.unfollows++;
-         updateFollowHistory(this.tabId, {
-            id: msg.user.userId,
-            username: msg.user.username,
-            status: 'unfollowed'
-         });
-      pipeline.next(1, 1);
-     }else{
-         var rnd = Math.floor(Math.random()*6)+5;
-         clog('block or network error, retry '+rnd+'min again',this.state);
-         //بلاک شدن یا عدم اتصال به اینترنت و ..
-         pipeline.previous(3,rnd*60);
-     }
- }else{
-     clog('follow error : skip');
-     // خطا در فالو
-     pipeline.next();
- }
+/**
+* آنفالو از صفحه
+*/
+unfollowTask.prototype.unfollowFromPageResponse = function (pipeline, msg) {
+    clog('unfollow response', msg);
+    if (msg.result) {
+        if (msg.response.status == 200) {
+            if(this.state.currentUser.currentState=='following'){
+                this.state.unfollowsCount++;
+            }else{
+                this.state.retakeRequestsCount++;
+            }
+
+            updateFollowHistory(this.tabId, {
+                id: msg.user.userId,
+                username: msg.user.username,
+                status: 'unfollowed'
+            });
+            pipeline.next(1, 1);
+        } else {
+            var rnd = Math.floor(Math.random() * 6) + 5;
+            clog('block or network error, retry ' + rnd + 'min again', this.state);
+            //بلاک شدن یا عدم اتصال به اینترنت و ..
+             var waitUntil = new Date();
+            waitUntil.setSeconds(waitUntil.getSeconds()+ rnd * 60);
+            this.state.waitUntil = waitUntil;
+            setTimeout($.proxy(this.endWaiting,this),rnd * 60 * 1000);
+
+            pipeline.previous(3, rnd * 60);
+        }
+    } else {
+        clog('follow error : skip');
+        // خطا در فالو
+        pipeline.next();
+    }
 }
+
+/**
+* پایان دادن به صبر
+*/
+unfollowTask.prototype.endWaiting = function(){
+    this.state.waitUntil = undefined;
+}
+
+/**
+* دریافت وضعیت وظیفه
+*/
+unfollowTask.prototype.getStatus = function(){
+    var currentStep;
+    switch(this.state.currentStep){
+        case 'fetchFromFollowings':
+            currentStep = 'استخراج فالوینگ ها';
+            break;
+        case 'fetchFollowHistories':
+            currentStep = 'آنفالو کردن کاربران';
+            break;
+    }
+
+    return {
+        type: 'آنفالو',
+        progress : this.state.progress>100?100:Math.floor(this.state.progress),
+        step  : currentStep,
+        waitUntil:this.state.waitUntil!=undefined?this.state.waitUntil.toISOString():undefined,
+        states:[
+            {name:'تعداد',value:this.state.count},
+            {name:'صفحات باز شده',value:this.state.profileViewsCount},
+            {name:'کاربران آنفالو شده',value:this.state.unfollowsCount},
+            {name:'درخواست های پس گرفته شده',value:this.state.retakeRequestsCount}
+        ]
+    };
+};

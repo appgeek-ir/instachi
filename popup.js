@@ -261,8 +261,12 @@ window['unfollowCtrl'] = {
             e.preventDefault();
             loadCtrl('mainCtrl');
         });
-        $main.find('button').on('click', function (e) {
-            that.createTask();
+        $main.find('#btn-run').on('click', function (e) {
+            that.createTask('auto');
+        });
+
+        $main.find('#btn-sync').on('click',function(e){
+            that.createTask('manual');
         });
 
     },
@@ -270,34 +274,30 @@ window['unfollowCtrl'] = {
     /**
      * تولید وظیفه آنفالو
      */
-    createTask: function () {
+    createTask: function (pattern) {
         msg = {
             action: 'createTask',
             type: 'Unfollow',
-            pattern: $('#unfollow-pattern').val(),
-            checkFollowStatus: $('#unfollow-not-followers').is(':checked'),
-            startType: $('#unfollow-task-start').val(),
-            order: $('#unfollow-order').val(),
-            count: $('#unfollow-count').val()
+            pattern: pattern,
+            checkFollowStatus: $('#check-follow-status').is(':checked'),
+            checkRequests: $('#check-requests').is(':checked'),
+            startType: 'auto',
+            count: $('#count').val()
         };
 
         clog('create unfollow task request');
         postMessage(msg, $.proxy(this.createTaskResponse, this));
     },
     createTaskResponse: function (msg) {
-        clog('create unfollow task response:', msg);
-        showTemplate('tasks');
-    }
+        clog('create task response', msg);
+        if (msg.result) {
+            loadCtrl('mainCtrl');
+        } else {
+            error(msg.message);
+        }
+    },
 };
 
-window['tasksCtrl'] = {
-
-
-    init: function () {
-
-    },
-
-}
 
 //initialize
 Zepto(function ($) {

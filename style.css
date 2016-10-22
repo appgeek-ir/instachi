@@ -163,3 +163,7 @@ div.action-bar {
     vertical-align: middle;
     margin-left: 14px;
 }
+
+input[type=checkbox], input[type=radio] {
+    margin-left: 5px;
+}
