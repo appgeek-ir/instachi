@@ -196,7 +196,7 @@ window['followCtrl'] = {
                 action: 'createTask',
                 type: 'Follow',
                 checkFollowHistory: $('#check-history').is(':checked'),
-                startType: $('#start-type').val(),
+                startType: 'auto',
                 count: $('#count').val()
             };
 

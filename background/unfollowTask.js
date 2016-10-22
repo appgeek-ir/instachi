@@ -169,7 +169,6 @@ unfollowTask.prototype.fetchFollowHistories = function () {
             db.followHistories
                 .orderBy('datetime')
                 .and(x => $.inArray(x.status,equals)!=-1)
-                .reverse()
                 .limit(this.state.count)
                 .toArray($.proxy(function (items) {
                     for (var i in items) {

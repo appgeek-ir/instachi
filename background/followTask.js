@@ -60,6 +60,7 @@ followTask.prototype.fetchFollowersFromPosts = function () {
         this.state.profileViewsCount++;
         this.tab.removeOnConnect();
         this.pipeline = this.tab.createPipeline($.proxy(function () {
+            this.state.currentStep = 'followFromFetchedUsers';
             this.followFromFetchedUsers();
         }, this));
         this.pipeline.register('getPosts', {}, $.proxy(this.getPostsCycle, this));
@@ -132,16 +133,22 @@ followTask.prototype.openPostResponse = function (pipeline, msg) {
                 if (all(this.state.users, function (user) {
                         return user.id != item.user.id
                     })) {
-                    addFlag++;
-                    clog('check user follow history', item.user);
-                    hasFollowHistory(this.tab.getViewer().id, item.user.id, $.proxy(function (exists) {
-                        addFlag--;
-                        if (!exists) {
-                            clog('add user to list:', item.user);
-                            this.state.users.push(item.user);
-                            this.state.progress = this.state.users.length/this.state.count*100;
-                        }
-                    }, this));
+                    //بررسی سابقه فالو
+                    if (this.state.checkFollowHistory) {
+                        addFlag++;
+                        clog('check user follow history', item.user);
+                        hasFollowHistory(this.tab.getViewer().id, item.user.id, $.proxy(function (exists) {
+                            addFlag--;
+                            if (!exists) {
+                                clog('add user to list:', item.user);
+                                this.state.users.push(item.user);
+                                this.state.progress = this.state.users.length / this.state.count * 100;
+                            }
+                        }, this));
+                    } else {
+                        this.state.users.push(item.user);
+                        this.state.progress = this.state.users.length / this.state.count * 100;
+                    }
                 }
             }, this));
 
@@ -159,16 +166,22 @@ followTask.prototype.openPostResponse = function (pipeline, msg) {
                     if (all(this.state.users, function (user) {
                             return user.id != item.user.id
                         })) {
-                        addFlag++;
-                        clog('check user follow history', item.user);
-                        hasFollowHistory(this.tab.userId, item.user.id, $.proxy(function (exists) {
-                            addFlag--;
-                            if (!exists) {
-                                clog('add user to list:', item.user);
-                                this.state.users.push(item.user);
-                                this.state.progress = this.state.users.length/this.state.count*100;
-                            }
-                        }, this));
+                        // بررسی سابقه فالو
+                        if (this.state.checkFollowHistory) {
+                            addFlag++;
+                            clog('check user follow history', item.user);
+                            hasFollowHistory(this.tab.userId, item.user.id, $.proxy(function (exists) {
+                                addFlag--;
+                                if (!exists) {
+                                    clog('add user to list:', item.user);
+                                    this.state.users.push(item.user);
+                                    this.state.progress = this.state.users.length / this.state.count * 100;
+                                }
+                            }, this));
+                        } else {
+                            this.state.users.push(item.user);
+                            this.state.progress = this.state.users.length / this.state.count * 100;
+                        }
                     }
                 }, this));
 
@@ -218,15 +231,22 @@ followTask.prototype.loadMoreCommentsResponse = function (pipeline, msg) {
                     if (all(this.state.users, function (user) {
                             return user.id != item.user.id
                         })) {
-                        addFlag++;
-                        hasFollowHistory(this.tab.userId, item.user.id, $.proxy(function (exists) {
-                            addFlag--;
-                            if (!exists) {
-                                clog('add user to list:', item.user);
-                                this.state.users.push(item.user);
-                                this.state.progress = this.state.users.length/this.state.count*100;
-                            }
-                        }, this));
+                        // بررسی تاریخچه فالو
+                        if (this.state.checkFollowHistory) {
+                            addFlag++;
+                            clog('check user follow history', item.user);
+                            hasFollowHistory(this.tab.userId, item.user.id, $.proxy(function (exists) {
+                                addFlag--;
+                                if (!exists) {
+                                    clog('add user to list:', item.user);
+                                    this.state.users.push(item.user);
+                                    this.state.progress = this.state.users.length / this.state.count * 100;
+                                }
+                            }, this));
+                        } else {
+                            this.state.users.push(item.user);
+                            this.state.progress = this.state.users.length / this.state.count * 100;
+                        }
                     }
                 }, this));
                 // صبر بابت پایان گرفتن عملیات دیتابیس
@@ -290,7 +310,7 @@ followTask.prototype.followFromFetchedUsers = function () {
             .register('followFromPage', {
                 username: user.username,
                 userId: user.id
-            }, $.proxy(this.followFromProfileResponse,this));
+            }, $.proxy(this.followFromProfileResponse, this));
 
     }
     this.pipeline.start();
@@ -300,7 +320,7 @@ followTask.prototype.followFromFetchedUsers = function () {
  * هندل کردن پاسخ دریافت اطلاعات پروفایل
  */
 followTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
-    this.state.progress = pipeline.index/pipeline.steps.length *100;
+    this.state.progress = pipeline.index / pipeline.steps.length * 100;
     clog('get profile info reponse', msg);
     if (msg.result) {
         if (!(msg.user.followed_by_viewer || msg.user.requested_by_viewer)) {
@@ -340,9 +360,9 @@ followTask.prototype.followFromProfileResponse = function (pipeline, msg) {
     if (msg.result) {
         if (msg.response.status == 200) {
             if (msg.response.data.status == 'ok') {
-                if(msg.response.data.result=='following'){
+                if (msg.response.data.result == 'following') {
                     this.state.followsCount++;
-                }else{
+                } else {
                     this.state.requestsCount++;
                 }
                 var currentUser = pipeline.getCurrentStep().args;
@@ -360,9 +380,9 @@ followTask.prototype.followFromProfileResponse = function (pipeline, msg) {
             var rnd = Math.floor(Math.random() * 6) + 5;
             clog('block or network error, retry ' + rnd + 'min again', this.state);
             var waitUntil = new Date();
-            waitUntil.setSeconds(waitUntil.getSeconds()+ rnd * 60);
+            waitUntil.setSeconds(waitUntil.getSeconds() + rnd * 60);
             this.state.waitUntil = waitUntil;
-            setTimeout($.proxy(this.endWaiting,this),rnd * 60 * 1000);
+            setTimeout($.proxy(this.endWaiting, this), rnd * 60 * 1000);
             //بلاک شدن یا عدم اتصال به اینترنت و ..
             pipeline.previous(3, rnd * 60);
         }
@@ -375,27 +395,28 @@ followTask.prototype.followFromProfileResponse = function (pipeline, msg) {
 }
 
 /**
-* پایان دادن به صبر
-*/
-followTask.prototype.endWaiting = function(){
+ * پایان دادن به صبر
+ */
+followTask.prototype.endWaiting = function () {
     this.state.waitUntil = undefined;
 }
 
 //.........................
 
 /**
- * فاو کاربران بدون بررسی حالت فالو
+ * استخراج کاربران از لیست
  */
-followTask.prototype.followFollowersWithoutCheck = function () {
+followTask.prototype.fetchFollowersFromList = function () {
     clog('follow followers without check');
     this.tab.onConnect($.proxy(function () {
         clog('connect after going to profile');
         this.tab.removeOnConnect();
         this.pipeline = this.tab.createPipeline($.proxy(function () {
-            this.completed(this);
+            this.state.currentStep = 'followFromFetchedUsers';
+            this.followFromFetchedUsers();
         }, this));
         this.state.currentPage = 1;
-        this.pipeline.register('openFollowers', {}, $.proxy(this.followFollowersCycle, this))
+        this.pipeline.register('openFollowers', {}, $.proxy(this.fetchFollowersFromListCycle, this))
             .start();
     }, this));
     this.tab.postMessage({
@@ -404,47 +425,78 @@ followTask.prototype.followFollowersWithoutCheck = function () {
     });
 };
 
+
 /**
  * چرخه فالو کاربران
  */
-followTask.prototype.followFollowersCycle = function (pipeline, msg) {
+followTask.prototype.fetchFollowersFromListCycle = function (pipeline, msg) {
     clog('get users info:', msg);
-    clog('page:' + this.state.currentPage);
     if (msg.result) {
         if (msg.response.status == 200) {
             var data = msg.response.data;
             if (data.status == 'ok') {
-                for (var i in data.followed_by.nodes) {
-                    var node = data.followed_by.nodes[i];
-                    if (!node.requested_by_viewer && !node.followed_by_viewer && (!this.state.checkFollowHistory || !hasFollowHistory(node.id))) {
-                        clog('add user to follow pipeline:', node);
-                        pipeline.register('followFromList', {
-                            userId: node.id,
-                            username: node.username
-                        }, $.proxy(this.followRequested, this));
-                    } else {
-                        clog('user already follow / follow requested / followed more than once:', node);
+                var addFlag = 0;
+
+               data.followed_by.nodes.forEach($.proxy(function(node){
+                    if (this.state.users.length >= this.state.count) {
+                        clog('desired count is reached');
+                        return;
                     }
-                }
-                if (data.followed_by.page_info.has_next_page) {
-                    this.state.currentPage++;
-                    pipeline.register('loadMoreFollowers', {}, $.proxy(this.followFollowersCycle, this));
-                    clog('more records are comming!');
-                } else {
-                    clog('no more record available!');
-                }
-                pipeline.next();
+                    if (!node.requested_by_viewer && !node.followed_by_viewer) {
+                        if (this.state.checkFollowHistory) {
+                            addFlag++;
+                            clog('check user follow history', node);
+                            hasFollowHistory(this.tab.userId, node.id, $.proxy(function (exists) {
+                                addFlag--;
+                                if (!exists) {
+                                    clog('add user to list:', node);
+                                    this.state.users.push(node);
+                                    this.state.progress = this.state.users.length / this.state.count * 100;
+                                }
+                            }, this));
+                        } else {
+                            clog('add user to follow list:', node);
+                            this.state.users.push(node);
+                            this.state.progress = this.state.users.length / this.state.count * 100;
+                        }
+                    } else {
+                        clog('user already follow / follow requested :', node);
+                    }
+                },this));
+
+                // صبر تا پایان نتایج دیتابیس
+                waitUntil(function () {
+                    return addFlag == 0;
+                }, $.proxy(function () {
+                    if (this.state.users.length < this.state.count) {
+                        if (data.followed_by.page_info.has_next_page) {
+                            pipeline.register('loadMoreFollowers', {}, $.proxy(this.fetchFollowersFromListCycle, this));
+                            clog('more records are comming!');
+                            pipeline.next();
+                        } else {
+                            clog('no more record available!');
+                            pipeline.end();
+                        }
+                    } else {
+                        clog('desired count is reached!');
+                        pipeline.end();
+                    }
+                }, this));
+
             } else {
                 clog('get users failed: server error!');
+                pipeline.next();
             }
         } else {
             // خطای دریافت
             clog('get users faild: network error!');
+            pipeline.next();
         }
 
     } else {
         //خطا
         clog('get users failed!');
+        pipeline.next();
     }
 };
 
@@ -495,35 +547,47 @@ followTask.prototype.followRequested = function (pipeline, msg) {
 };
 
 /**
-* دریافت وضعیت وظیفه
-*/
-followTask.prototype.getStatus = function(){
+ * دریافت وضعیت وظیفه
+ */
+followTask.prototype.getStatus = function () {
     var currentStep;
-    switch(this.state.currentStep){
-        case 'fetchFollowersFromPosts':
-            currentStep = 'استخراج کاربران از پست ها';
-            break;
-        case 'fetchFollowersFromList':
-            currentStep = 'استخراج کاربران از لیست فالورها';
-            break;
-        case 'fetchFollowersFromHashtag':
-            currentStep = 'استخراج کاربران از پست های هشتگ';
-            break;
-        case 'followFromFetchedUsers':
-            currentStep = 'فالوکردن کاربران';
-            break;
+    switch (this.state.currentStep) {
+    case 'fetchFollowersFromPosts':
+        currentStep = 'استخراج کاربران از پست ها';
+        break;
+    case 'fetchFollowersFromList':
+        currentStep = 'استخراج کاربران از لیست فالورها';
+        break;
+    case 'fetchFollowersFromHashtag':
+        currentStep = 'استخراج کاربران از پست های هشتگ';
+        break;
+    case 'followFromFetchedUsers':
+        currentStep = 'فالوکردن کاربران';
+        break;
     }
 
     return {
         type: 'فالو',
-        progress : this.state.progress>100?100:Math.floor(this.state.progress),
-        step  : currentStep,
-        waitUntil:this.state.waitUntil!=undefined?this.state.waitUntil.toISOString():undefined,
-        states:[
-            {name:'کاربران استخراج شده',value:this.state.users.length},
-            {name:'صفحات باز شده',value:this.state.profileViewsCount},
-            {name:'کاربران فالو شده',value:this.state.followsCount},
-            {name:'درخواست های فالو',value:this.state.requestsCount}
+        progress: this.state.progress > 100 ? 100 : Math.floor(this.state.progress),
+        step: currentStep,
+        waitUntil: this.state.waitUntil != undefined ? this.state.waitUntil.toISOString() : undefined,
+        states: [
+            {
+                name: 'کاربران استخراج شده',
+                value: this.state.users.length
+            },
+            {
+                name: 'صفحات باز شده',
+                value: this.state.profileViewsCount
+            },
+            {
+                name: 'کاربران فالو شده',
+                value: this.state.followsCount
+            },
+            {
+                name: 'درخواست های فالو',
+                value: this.state.requestsCount
+            }
         ]
     };
 };

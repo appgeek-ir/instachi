@@ -225,7 +225,7 @@ function showFollowHistories(userId) {
     $histories.children('*').remove();
     db.followHistories
         .orderBy('datetime')
-        //.and(x => $.inArray(x.status,['following','requested'])!=-1)
+        .and(x => $.inArray(x.status,['following','requested'])!=-1)
         //.reverse()
         .limit(10)
         .toArray(function (items) {
