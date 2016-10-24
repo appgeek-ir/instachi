@@ -451,7 +451,10 @@ var controller = {
         });
     },
     unfollowFromPage: function (msg) {
-        var button = document.querySelector('span>section>main>article>header>div:nth-child(2)>div>span>span:nth-child(1)>button');
+        var button = document.querySelector('span>section>main>article>header>div:nth-child(2)>div>span:nth-child(2)>span:nth-child(1)>button');
+        if(button==null){
+            button = document.querySelector('span>section>main>article>header>div:nth-child(2)>div>span:nth-child(2)>button');
+        }
         if (button != null) {
             Execute(function (id, args) {
                 window.registerRequest(id, '/web/friendships/' + args.userId + '/unfollow/');
@@ -600,7 +603,10 @@ var controller = {
     },
 
     followFromPage: function (msg) {
-        var button = document.querySelector('span>section>main>article>header>div:nth-child(2)>div>span>span:nth-child(1)>button');
+        var button = document.querySelector('span>section>main>article>header>div:nth-child(2)>div>span:nth-child(2)>span:nth-child(1)>button');
+        if(button==null){
+            button = document.querySelector('span>section>main>article>header>div:nth-child(2)>div>span:nth-child(2)>button');
+        }
         if (button != null) {
             Execute(function (id, args) {
                 window.registerRequest(id, '/web/friendships/' + args.userId + '/follow/');
@@ -632,8 +638,8 @@ var controller = {
 /**
  * جلوگیری از لود شدن تصاویر
  */
-/** */
-var skipImages = true;
+/**
+var skipImages = false;
 observeDOM(document, function (args) {
     if (skipImages) {
         for (var i in args) {
@@ -647,7 +653,7 @@ observeDOM(document, function (args) {
         }
     }
 });
-
+*/
 /*
 document.querySelectorAll('script').forEach(function(node){
     var src= node.getAttribute('src');

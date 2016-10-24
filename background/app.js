@@ -60,6 +60,9 @@ function invokeCallback(id, msg) {
  * userId: برای استفاده همزمان برای چندین حساب کاربری
  */
 function getDb(userId) {
+    if(userId==undefined){
+        return null;
+    }
     var db = new Dexie('user_' + userId);
     db.version(1).stores({
         tasks: 'id,state,status',
@@ -134,7 +137,7 @@ function updateFollowHistory(tabId, history) {
                     clog('item:', item);
                     if (item == undefined) {
                         // در صورت وارد نشده بودن زمان آن را برابرحال قرار می دهیم
-                        if(history.datetime==undefined){
+                        if (history.datetime == undefined) {
                             history.datetime = new Date().getTime();
                         }
                         db.followHistories.add(history).then(function () {
@@ -144,9 +147,9 @@ function updateFollowHistory(tabId, history) {
                         });
                     } else {
                         // در صورت تغییر وضعیت زمان هم تغییر می کند
-                        if(item.status!=history.status){
+                        if (item.status != history.status) {
                             history.datetime = new Date().getTime();
-                        }else{
+                        } else {
                             if (item.datetime == undefined) {
                                 history.datetime = new Date().getTime();
                             } else {
@@ -223,47 +226,68 @@ function showFollowHistories(userId) {
     var db = getDb(userId);
     var $histories = $('#histories');
     $histories.children('*').remove();
-    db.followHistories
-        .orderBy('datetime')
+    var query = db.followHistories
+        .orderBy('datetime');
         //.and(x => $.inArray(x.status,['following','requested'])!=-1)
         //.reverse()
         //.limit(10)
-        .toArray(function (items) {
-            for(var i in items){
+    query.count(function (count) {
+        $histories.append('<div>'+count+'</div>');
+    })
+
+    query.toArray(function (items) {
+            for (var i in items) {
                 var item = items[i];
-                $histories.append('<span>'+item.id+','+item.username+','+ item.datetime +','+ item.status +';</span>');
+                $histories.append('<div>' + item.id + '  ' + item.username + '  ' + new Date(item.datetime) + '  ' + item.status + ';</div>');
             }
         });
 }
 
-function update(userId){
+function update(userId) {
 
     var db = getDb(userId);
     db.followHistories
-      .toArray(function (histories) {
-        var count= histories.length;
+        .toArray(function (histories) {
+            var count = histories.length;
 
-        for(var i in histories){
-            clog(count--);
-            var history = histories[i];
-            var datetime = Date.parse(history.datetime);
-            if(!isNaN(datetime)){
-                history.datetime = datetime;
-                db.followHistories.put(history).then(function () {
-                                clog('history updated!');
-                            }).catch(function (err) {
-                                clog('update follow history: db error: ' + err);
-                            });
+            for (var i in histories) {
+                clog(count--);
+                var history = histories[i];
+                var datetime = Date.parse(history.datetime);
+                if (!isNaN(datetime)) {
+                    history.datetime = datetime;
+                    db.followHistories.put(history).then(function () {
+                        clog('history updated!');
+                    }).catch(function (err) {
+                        clog('update follow history: db error: ' + err);
+                    });
+                }
             }
-        }
-    });
+        });
 
 }
 
 Zepto(function () {
-    $('body').append('<div id="container"><div><ul id="dbs"></ul></div><div id="histories"></div></div>');
 
     var $container = $('#container');
+    var $histories = $('#histories');
+    $('#btn-import').on('click', function () {
+        var db = getDb($('#user-id').val());
+        var data = $('#data').val().split(';');
+        for (var i in data) {
+            var row = data[i].split(',');
+            db.followHistories.add({
+                id: row[0].toString(),
+                username: row[1],
+                datetime:parseInt(row[2]),
+                status: row[3]
+            }).then(function () {
+                clog('history inserted');
+            }).catch(function (err) {
+                clog('update follow history: db error: ' + err);
+            });
+        }
+    });
 
     Dexie.getDatabaseNames(function callback(names) {
         var $ul = $('#dbs');
@@ -271,17 +295,17 @@ Zepto(function () {
             var $li = $('<li></li>');
             var $a = $('<a href="#">' + names[i] + '</a>');
             var $upd = $('<a href="#"> update </a>');
-            $upd.on('click',function(e){
+            $upd.on('click', function (e) {
                 e.preventDefault();
                 var $this = $(this)
                 update($this.data('id').split('_')[1]);
-            }).data('id',names[i]);
+            }).data('id', names[i]);
 
             $a.on('click', function (e) {
                 e.preventDefault();
                 var $this = $(this)
                 showFollowHistories($this.data('id').split('_')[1]);
-            }).data('id',names[i]);
+            }).data('id', names[i]);
             $a.appendTo($li);
             $upd.appendTo($li);
             $li.appendTo($ul);

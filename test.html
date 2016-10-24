@@ -1,0 +1,23 @@
+<script>
+var a= {
+    count:0,
+    inc: function(){
+        console.log('count:' +  this.count);
+        var that = this;
+        setTimeout(function(){
+            that.count++;
+            that.inc();
+        },1000);
+    },
+
+};
+
+    function deleteA(){
+        console.log('delete a');
+        a = undefined;
+    }
+
+</script>
+
+<button type="button" onclick="a.inc()">inc</button>
+<button type="button" onclick="deleteA()">delete</button>

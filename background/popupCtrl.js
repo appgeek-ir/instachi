@@ -84,5 +84,35 @@ var popupCtrl = {
             }
         });
 
+    },
+    stopTask: function(port,msg) {
+        clog('stop task',msg );
+        chrome.tabs.query({
+            active: true,
+            currentWindow: true
+        }, function (items) {
+            if (items.length > 0) {
+                if (tabs[items[0].id].task != undefined) {
+                    clog('stop task:task found');
+                    taskService.stop(tabs[items[0].id].task);
+                    port.postMessage({
+                        action: 'callback.stopTask',
+                        result: true
+                    });
+                } else {
+                    clog('stop task:task not found');
+                    port.postMessage({
+                        action: 'callback.stopTask',
+                        result: false
+                    });
+                }
+            }else{
+                clog('stop task:tab not found');
+                port.postMessage({
+                    action: 'callback.stopTask',
+                    result: false
+                });
+            }
+        });
     }
 };

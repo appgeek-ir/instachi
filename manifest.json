@@ -1,15 +1,15 @@
 {
     "manifest_version": 2,
-
     "name": "Instachi",
-    "description": "مدیریت خودکار اینستاگرام: فالو و آنفالو",
-    "version": "0.1.0",
+    "description": "Instagram worker",
+    "version": "0.7.0",
     "icons": {
         "16": "images/icon.png",
         "48": "images/icon.png",
         "128": "images/icon.png"
     },
     "page_action": {
+        "default_title": "Instachi Extension",
         "default_icon": "images/icon.png",
         "default_popup": "popup.html"
     },
@@ -22,7 +22,7 @@
    ],
     "background": {
         "persistent": true,
-        "scripts": ["zepto.min.js", "dexie.min.js", "bg.js"]
+        "page": "bg.html"
     },
     "content_scripts": [{
         "matches": ["*://www.instagram.com/*"],

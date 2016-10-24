@@ -4,6 +4,7 @@ var pipeline = function (port, onCompleted) {
     this.index = 0;
     this.port = port;
     this.onCompleted = onCompleted;
+    this.forceStop = false;
 }
 
 pipeline.prototype.register = function (action, args, fn) {
@@ -50,6 +51,9 @@ pipeline.prototype.registerAfter = function (action, args, fn) {
 }
 
 pipeline.prototype.start = function () {
+    if(this.forceStop){
+        return;
+    }
     this.index = -1;
     this.startTime = new Date();
     this.status = 'Started';
@@ -57,6 +61,9 @@ pipeline.prototype.start = function () {
 }
 
 pipeline.prototype.next = function (steps, seconds) {
+    if(this.forceStop){
+        return;
+    }
     if (seconds == undefined) {
         if (this.status != 'Started') {
             clog('pipeline is not started');
@@ -80,13 +87,17 @@ pipeline.prototype.next = function (steps, seconds) {
             this.completed('Completed');
         }
     } else {
-        setTimeout($.proxy(function () {
+        this.timeoutId = setTimeout($.proxy(function () {
+            delete this.timeoutId;
             this.next(steps);
         }, this), seconds * 1000);
     }
 }
 
 pipeline.prototype.previous = function (steps, seconds) {
+    if(this.forceStop){
+        return;
+    }
     if (seconds == undefined) {
         if (this.status != 'Started') {
             clog('pipeline is not started');
@@ -110,7 +121,8 @@ pipeline.prototype.previous = function (steps, seconds) {
             this.completed('Completed');
         }
     } else {
-        setTimeout($.proxy(function () {
+        this.timeoutId = setTimeout($.proxy(function () {
+            delete this.timeoutId;
             this.previous(steps);
         }, this), seconds * 1000);
     }
@@ -135,8 +147,15 @@ pipeline.prototype.getCurrentStep = function () {
 }
 
 pipeline.prototype.retry = function (seconds) {
+    if(this.forceStop){
+        return;
+    }
     seconds = seconds || 0.1;
-    setTimeout($.proxy(function () {
+    this.timeoutId = setTimeout($.proxy(function () {
+        delete this.timeoutId;
+        if(this.forceStop){
+            return;
+        }
         if (this.status != 'Started') {
             clog('retry failed: pipeline is not started');
             return;
@@ -147,4 +166,11 @@ pipeline.prototype.retry = function (seconds) {
             step.callback(this, msg);
         }, this));
     }, this), seconds * 1000);
+}
+
+pipeline.prototype.stop = function(){
+    this.forceStop = true;
+    if(this.timeoutId!=undefined){
+        clearTimeout(this.timeoutId);
+    }
 }

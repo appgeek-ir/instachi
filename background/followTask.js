@@ -15,8 +15,6 @@ var followTask = function (args) {
             this.state.currentStep = 'fetchFollowersFromPosts';
         } else if (this.state.pattern == 'followers') {
             this.state.currentStep = 'fetchFollowersFromList';
-        } else if (this.state.pattern == 'hashtag') {
-            this.state.currentStep = 'fetchFollowersFromHashtag';
         } else {
             // الگوی اشتباه
         }
@@ -59,6 +57,10 @@ followTask.prototype.fetchFollowersFromPosts = function () {
         clog('connect after going to profile');
         this.state.profileViewsCount++;
         this.tab.removeOnConnect();
+        if (this.forceStop()) {
+            clog('force task to stop');
+            return;
+        }
         this.pipeline = this.tab.createPipeline($.proxy(function () {
             this.state.currentStep = 'followFromFetchedUsers';
             this.followFromFetchedUsers();
@@ -78,6 +80,12 @@ followTask.prototype.fetchFollowersFromPosts = function () {
  */
 followTask.prototype.getPostsCycle = function (pipeline, msg) {
     clog('get posts', msg);
+
+    //بررسی پایان کار
+    if (this.forceStop()) {
+        clog('force task to stop');
+        return;
+    }
     if (msg.result) {
         var media;
         if (msg.response !== undefined) {
@@ -119,6 +127,10 @@ followTask.prototype.getPostsCycle = function (pipeline, msg) {
  */
 followTask.prototype.openPostResponse = function (pipeline, msg) {
     clog('get post reponse', msg);
+    if (this.forceStop()) {
+        clog('force task to stop');
+        return;
+    }
     if (msg.result) {
         if (msg.response.status == 200) {
             var media = msg.response.data.media,
@@ -126,6 +138,10 @@ followTask.prototype.openPostResponse = function (pipeline, msg) {
             clog('find user in likes');
             //دریافت اطلاعت لایک ها
             media.likes.nodes.forEach($.proxy(function (item) {
+                if (this.forceStop()) {
+                    clog('force task to stop');
+                    return;
+                }
                 if (this.state.users.length >= this.state.count) {
                     clog('fetched count is reached');
                     return;
@@ -153,12 +169,20 @@ followTask.prototype.openPostResponse = function (pipeline, msg) {
             }, this));
 
             // صبر بابت پایان گرفتن عملیات دیتابیس
-            waitUntil(function () {
-                return addFlag == 0;
-            }, $.proxy(function () {
+            waitUntil($.proxy(function () {
+                return this.forceStop() || addFlag == 0;
+            }, this), $.proxy(function () {
                 //دریافت اطلاعات کامنت ها
                 clog('find user in comments');
+                if (this.forceStop()) {
+                    clog('force task to stop');
+                    return;
+                }
                 media.comments.nodes.forEach($.proxy(function (item) {
+                    if (this.forceStop()) {
+                        clog('force task to stop');
+                        return;
+                    }
                     if (this.state.users.length >= this.state.count) {
                         clog('fetched count is reached');
                         return;
@@ -186,10 +210,14 @@ followTask.prototype.openPostResponse = function (pipeline, msg) {
                 }, this));
 
                 // صبر بابت پایان گرفتن عملیات دیتابیس
-                waitUntil(function () {
-                    return addFlag == 0;
-                }, $.proxy(function () {
+                waitUntil($.proxy(function () {
+                    return this.forceStop() || addFlag == 0;
+                }, this), $.proxy(function () {
                     clog('check for next step');
+                    if (this.forceStop()) {
+                        clog('force task to stop');
+                        return;
+                    }
                     if (this.state.users.length < this.state.count) {
                         // بررسی وجود کامنت بیشتر
                         if (media.comments.page_info.has_previous_page) {
@@ -218,6 +246,10 @@ followTask.prototype.openPostResponse = function (pipeline, msg) {
  */
 followTask.prototype.loadMoreCommentsResponse = function (pipeline, msg) {
     clog('more comments response:', msg);
+    if (this.forceStop()) {
+        clog('force task to stop');
+        return;
+    }
     if (msg.result) {
         if (msg.response.status == 200) {
             if (msg.response.data.status == 'ok') {
@@ -225,6 +257,10 @@ followTask.prototype.loadMoreCommentsResponse = function (pipeline, msg) {
                 var addFlag = 0;
                 var media = msg.response.data;
                 media.comments.nodes.forEach($.proxy(function (item) {
+                    if (this.forceStop()) {
+                        clog('force task to stop');
+                        return;
+                    }
                     if (this.state.users.length >= this.state.count) {
                         return;
                     }
@@ -250,10 +286,14 @@ followTask.prototype.loadMoreCommentsResponse = function (pipeline, msg) {
                     }
                 }, this));
                 // صبر بابت پایان گرفتن عملیات دیتابیس
-                waitUntil(function () {
-                    return addFlag == 0;
-                }, $.proxy(function () {
+                waitUntil($.proxy(function () {
+                    return this.forceStop() || addFlag == 0;
+                }, this), $.proxy(function () {
                     clog('check for next step');
+                    if (this.forceStop()) {
+                        clog('force task to stop');
+                        return;
+                    }
                     if (this.state.users.length < this.state.count) {
                         // بررسی وجود کامنت بیشتر
                         if (media.comments.page_info.has_previous_page) {
@@ -286,13 +326,24 @@ followTask.prototype.loadMoreCommentsResponse = function (pipeline, msg) {
 followTask.prototype.followFromFetchedUsers = function () {
     this.state.progress = 0;
     clog('starte follow from fetched users');
+    if (this.forceStop()) {
+        clog('force task to stop');
+        return;
+    }
     this.pipeline = this.tab.createPipeline($.proxy(function () {
         this.completed(this);
     }, this));
 
-    for (var i in this.state.users) {
-        var user = this.state.users[i];
+    this.state.users.forEach($.proxy(function (user) {
+        if (this.forceStop()) {
+            clog('force task to stop');
+            return;
+        }
         this.pipeline.register($.proxy(function () {
+                if (this.forceStop()) {
+                    clog('force task to stop');
+                    return;
+                }
                 this.state.currentUser = user;
                 this.tab.onConnect($.proxy(function () {
                     clog('connect after going to profile');
@@ -311,8 +362,8 @@ followTask.prototype.followFromFetchedUsers = function () {
                 username: user.username,
                 userId: user.id
             }, $.proxy(this.followFromProfileResponse, this));
+    }, this));
 
-    }
     this.pipeline.start();
 };
 
@@ -390,7 +441,6 @@ followTask.prototype.followFromProfileResponse = function (pipeline, msg) {
         //خطا
         clog('follow failed!', this.state.currentUser);
         pipeline.next();
-        return;
     }
 }
 
@@ -408,9 +458,17 @@ followTask.prototype.endWaiting = function () {
  */
 followTask.prototype.fetchFollowersFromList = function () {
     clog('follow followers without check');
+    if (this.forceStop()) {
+        clog('force task to stop');
+        return;
+    }
     this.tab.onConnect($.proxy(function () {
         clog('connect after going to profile');
         this.tab.removeOnConnect();
+        if (this.forceStop()) {
+            clog('force task to stop');
+            return;
+        }
         this.pipeline = this.tab.createPipeline($.proxy(function () {
             this.state.currentStep = 'followFromFetchedUsers';
             this.followFromFetchedUsers();
@@ -431,13 +489,21 @@ followTask.prototype.fetchFollowersFromList = function () {
  */
 followTask.prototype.fetchFollowersFromListCycle = function (pipeline, msg) {
     clog('get users info:', msg);
+    if (this.forceStop()) {
+        clog('force task to stop');
+        return;
+    }
     if (msg.result) {
         if (msg.response.status == 200) {
             var data = msg.response.data;
             if (data.status == 'ok') {
                 var addFlag = 0;
 
-               data.followed_by.nodes.forEach($.proxy(function(node){
+                data.followed_by.nodes.forEach($.proxy(function (node) {
+                    if (this.forceStop()) {
+                        clog('force task to stop');
+                        return;
+                    }
                     if (this.state.users.length >= this.state.count) {
                         clog('desired count is reached');
                         return;
@@ -462,12 +528,16 @@ followTask.prototype.fetchFollowersFromListCycle = function (pipeline, msg) {
                     } else {
                         clog('user already follow / follow requested :', node);
                     }
-                },this));
+                }, this));
 
                 // صبر تا پایان نتایج دیتابیس
-                waitUntil(function () {
-                    return addFlag == 0;
-                }, $.proxy(function () {
+                waitUntil($.proxy(function () {
+                    return this.forceStop() || addFlag == 0;
+                },this), $.proxy(function () {
+                    if (this.forceStop()) {
+                        clog('force task to stop');
+                        return;
+                    }
                     if (this.state.users.length < this.state.count) {
                         if (data.followed_by.page_info.has_next_page) {
                             pipeline.register('loadMoreFollowers', {}, $.proxy(this.fetchFollowersFromListCycle, this));
@@ -497,52 +567,6 @@ followTask.prototype.fetchFollowersFromListCycle = function (pipeline, msg) {
         //خطا
         clog('get users failed!');
         pipeline.next();
-    }
-};
-
-/**
- * بررسی درخواست دنبال کردن کاربر
- * msg
- *  result: boolean
- *  request:
- *    status: status code
- *    data: server response
- */
-followTask.prototype.followRequested = function (pipeline, msg) {
-    clog('follow response :', msg);
-    if (msg.result) {
-        if (msg.response.status == 200) {
-            if (msg.response.data.status == 'ok') {
-                this.state.count--;
-                var currentUser = pipeline.getCurrentStep().args;
-                updateFollowHistory(this.tabId, {
-                    id: currentUser.userId,
-                    username: currentUser.username,
-                    status: msg.response.data.result,
-                    datetime: new Date().getTime()
-                });
-
-                if (this.state.count < 1) {
-                    clog('pipeline completed', this.state);
-                    this.persist('completed');
-                    pipeline.completed(this);
-                    return;
-                } else {
-                    this.persist();
-                    pipeline.next();
-                    return;
-                }
-            } else {
-                clog('follow failed!: server error', this.state.currentUser);
-            }
-        } else {
-            clog('follow failed!: network error', this.state.currentUser);
-        }
-    } else {
-        //خطا
-        clog('follow failed!', this.state.currentUser);
-        pipeline.next();
-        return;
     }
 };
 
@@ -596,3 +620,20 @@ followTask.prototype.getStatus = function () {
  * اتمام وظیفه فالو
  */
 followTask.prototype.completed = function () { /* nothing */ };
+
+/**
+ * بررسی پایان کار اجباری
+ */
+followTask.prototype.forceStop = function () {
+    return this.stopSignal;
+}
+
+/**
+ * متوقف کردن وظیفه
+ */
+followTask.prototype.stop = function () {
+    this.stopSignal = true;
+    if (this.pipeline != undefined) {
+        this.pipeline.stop();
+    }
+}

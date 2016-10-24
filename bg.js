@@ -60,6 +60,9 @@ function invokeCallback(id, msg) {
  * userId: برای استفاده همزمان برای چندین حساب کاربری
  */
 function getDb(userId) {
+    if(userId==undefined){
+        return null;
+    }
     var db = new Dexie('user_' + userId);
     db.version(1).stores({
         tasks: 'id,state,status',
@@ -134,7 +137,7 @@ function updateFollowHistory(tabId, history) {
                     clog('item:', item);
                     if (item == undefined) {
                         // در صورت وارد نشده بودن زمان آن را برابرحال قرار می دهیم
-                        if(history.datetime==undefined){
+                        if (history.datetime == undefined) {
                             history.datetime = new Date().getTime();
                         }
                         db.followHistories.add(history).then(function () {
@@ -144,9 +147,9 @@ function updateFollowHistory(tabId, history) {
                         });
                     } else {
                         // در صورت تغییر وضعیت زمان هم تغییر می کند
-                        if(item.status!=history.status){
+                        if (item.status != history.status) {
                             history.datetime = new Date().getTime();
-                        }else{
+                        } else {
                             if (item.datetime == undefined) {
                                 history.datetime = new Date().getTime();
                             } else {
@@ -223,47 +226,68 @@ function showFollowHistories(userId) {
     var db = getDb(userId);
     var $histories = $('#histories');
     $histories.children('*').remove();
-    db.followHistories
-        .orderBy('datetime')
+    var query = db.followHistories
+        .orderBy('datetime');
         //.and(x => $.inArray(x.status,['following','requested'])!=-1)
         //.reverse()
         //.limit(10)
-        .toArray(function (items) {
-            for(var i in items){
+    query.count(function (count) {
+        $histories.append('<div>'+count+'</div>');
+    })
+
+    query.toArray(function (items) {
+            for (var i in items) {
                 var item = items[i];
-                $histories.append('<span>'+item.id+','+item.username+','+ item.datetime +','+ item.status +';</span>');
+                $histories.append('<div>' + item.id + '  ' + item.username + '  ' + new Date(item.datetime) + '  ' + item.status + ';</div>');
             }
         });
 }
 
-function update(userId){
+function update(userId) {
 
     var db = getDb(userId);
     db.followHistories
-      .toArray(function (histories) {
-        var count= histories.length;
+        .toArray(function (histories) {
+            var count = histories.length;
 
-        for(var i in histories){
-            clog(count--);
-            var history = histories[i];
-            var datetime = Date.parse(history.datetime);
-            if(!isNaN(datetime)){
-                history.datetime = datetime;
-                db.followHistories.put(history).then(function () {
-                                clog('history updated!');
-                            }).catch(function (err) {
-                                clog('update follow history: db error: ' + err);
-                            });
+            for (var i in histories) {
+                clog(count--);
+                var history = histories[i];
+                var datetime = Date.parse(history.datetime);
+                if (!isNaN(datetime)) {
+                    history.datetime = datetime;
+                    db.followHistories.put(history).then(function () {
+                        clog('history updated!');
+                    }).catch(function (err) {
+                        clog('update follow history: db error: ' + err);
+                    });
+                }
             }
-        }
-    });
+        });
 
 }
 
 Zepto(function () {
-    $('body').append('<div id="container"><div><ul id="dbs"></ul></div><div id="histories"></div></div>');
 
     var $container = $('#container');
+    var $histories = $('#histories');
+    $('#btn-import').on('click', function () {
+        var db = getDb($('#user-id').val());
+        var data = $('#data').val().split(';');
+        for (var i in data) {
+            var row = data[i].split(',');
+            db.followHistories.add({
+                id: row[0].toString(),
+                username: row[1],
+                datetime:parseInt(row[2]),
+                status: row[3]
+            }).then(function () {
+                clog('history inserted');
+            }).catch(function (err) {
+                clog('update follow history: db error: ' + err);
+            });
+        }
+    });
 
     Dexie.getDatabaseNames(function callback(names) {
         var $ul = $('#dbs');
@@ -271,24 +295,23 @@ Zepto(function () {
             var $li = $('<li></li>');
             var $a = $('<a href="#">' + names[i] + '</a>');
             var $upd = $('<a href="#"> update </a>');
-            $upd.on('click',function(e){
+            $upd.on('click', function (e) {
                 e.preventDefault();
                 var $this = $(this)
                 update($this.data('id').split('_')[1]);
-            }).data('id',names[i]);
+            }).data('id', names[i]);
 
             $a.on('click', function (e) {
                 e.preventDefault();
                 var $this = $(this)
                 showFollowHistories($this.data('id').split('_')[1]);
-            }).data('id',names[i]);
+            }).data('id', names[i]);
             $a.appendTo($li);
             $upd.appendTo($li);
             $li.appendTo($ul);
         }
     });
 });
-
 /**
  * سازنده وظیفه فالو
  */
@@ -306,8 +329,6 @@ var followTask = function (args) {
             this.state.currentStep = 'fetchFollowersFromPosts';
         } else if (this.state.pattern == 'followers') {
             this.state.currentStep = 'fetchFollowersFromList';
-        } else if (this.state.pattern == 'hashtag') {
-            this.state.currentStep = 'fetchFollowersFromHashtag';
         } else {
             // الگوی اشتباه
         }
@@ -350,6 +371,10 @@ followTask.prototype.fetchFollowersFromPosts = function () {
         clog('connect after going to profile');
         this.state.profileViewsCount++;
         this.tab.removeOnConnect();
+        if (this.forceStop()) {
+            clog('force task to stop');
+            return;
+        }
         this.pipeline = this.tab.createPipeline($.proxy(function () {
             this.state.currentStep = 'followFromFetchedUsers';
             this.followFromFetchedUsers();
@@ -369,6 +394,12 @@ followTask.prototype.fetchFollowersFromPosts = function () {
  */
 followTask.prototype.getPostsCycle = function (pipeline, msg) {
     clog('get posts', msg);
+
+    //بررسی پایان کار
+    if (this.forceStop()) {
+        clog('force task to stop');
+        return;
+    }
     if (msg.result) {
         var media;
         if (msg.response !== undefined) {
@@ -410,6 +441,10 @@ followTask.prototype.getPostsCycle = function (pipeline, msg) {
  */
 followTask.prototype.openPostResponse = function (pipeline, msg) {
     clog('get post reponse', msg);
+    if (this.forceStop()) {
+        clog('force task to stop');
+        return;
+    }
     if (msg.result) {
         if (msg.response.status == 200) {
             var media = msg.response.data.media,
@@ -417,6 +452,10 @@ followTask.prototype.openPostResponse = function (pipeline, msg) {
             clog('find user in likes');
             //دریافت اطلاعت لایک ها
             media.likes.nodes.forEach($.proxy(function (item) {
+                if (this.forceStop()) {
+                    clog('force task to stop');
+                    return;
+                }
                 if (this.state.users.length >= this.state.count) {
                     clog('fetched count is reached');
                     return;
@@ -444,12 +483,20 @@ followTask.prototype.openPostResponse = function (pipeline, msg) {
             }, this));
 
             // صبر بابت پایان گرفتن عملیات دیتابیس
-            waitUntil(function () {
-                return addFlag == 0;
-            }, $.proxy(function () {
+            waitUntil($.proxy(function () {
+                return this.forceStop() || addFlag == 0;
+            }, this), $.proxy(function () {
                 //دریافت اطلاعات کامنت ها
                 clog('find user in comments');
+                if (this.forceStop()) {
+                    clog('force task to stop');
+                    return;
+                }
                 media.comments.nodes.forEach($.proxy(function (item) {
+                    if (this.forceStop()) {
+                        clog('force task to stop');
+                        return;
+                    }
                     if (this.state.users.length >= this.state.count) {
                         clog('fetched count is reached');
                         return;
@@ -477,10 +524,14 @@ followTask.prototype.openPostResponse = function (pipeline, msg) {
                 }, this));
 
                 // صبر بابت پایان گرفتن عملیات دیتابیس
-                waitUntil(function () {
-                    return addFlag == 0;
-                }, $.proxy(function () {
+                waitUntil($.proxy(function () {
+                    return this.forceStop() || addFlag == 0;
+                }, this), $.proxy(function () {
                     clog('check for next step');
+                    if (this.forceStop()) {
+                        clog('force task to stop');
+                        return;
+                    }
                     if (this.state.users.length < this.state.count) {
                         // بررسی وجود کامنت بیشتر
                         if (media.comments.page_info.has_previous_page) {
@@ -509,6 +560,10 @@ followTask.prototype.openPostResponse = function (pipeline, msg) {
  */
 followTask.prototype.loadMoreCommentsResponse = function (pipeline, msg) {
     clog('more comments response:', msg);
+    if (this.forceStop()) {
+        clog('force task to stop');
+        return;
+    }
     if (msg.result) {
         if (msg.response.status == 200) {
             if (msg.response.data.status == 'ok') {
@@ -516,6 +571,10 @@ followTask.prototype.loadMoreCommentsResponse = function (pipeline, msg) {
                 var addFlag = 0;
                 var media = msg.response.data;
                 media.comments.nodes.forEach($.proxy(function (item) {
+                    if (this.forceStop()) {
+                        clog('force task to stop');
+                        return;
+                    }
                     if (this.state.users.length >= this.state.count) {
                         return;
                     }
@@ -541,10 +600,14 @@ followTask.prototype.loadMoreCommentsResponse = function (pipeline, msg) {
                     }
                 }, this));
                 // صبر بابت پایان گرفتن عملیات دیتابیس
-                waitUntil(function () {
-                    return addFlag == 0;
-                }, $.proxy(function () {
+                waitUntil($.proxy(function () {
+                    return this.forceStop() || addFlag == 0;
+                }, this), $.proxy(function () {
                     clog('check for next step');
+                    if (this.forceStop()) {
+                        clog('force task to stop');
+                        return;
+                    }
                     if (this.state.users.length < this.state.count) {
                         // بررسی وجود کامنت بیشتر
                         if (media.comments.page_info.has_previous_page) {
@@ -577,13 +640,24 @@ followTask.prototype.loadMoreCommentsResponse = function (pipeline, msg) {
 followTask.prototype.followFromFetchedUsers = function () {
     this.state.progress = 0;
     clog('starte follow from fetched users');
+    if (this.forceStop()) {
+        clog('force task to stop');
+        return;
+    }
     this.pipeline = this.tab.createPipeline($.proxy(function () {
         this.completed(this);
     }, this));
 
-    for (var i in this.state.users) {
-        var user = this.state.users[i];
+    this.state.users.forEach($.proxy(function (user) {
+        if (this.forceStop()) {
+            clog('force task to stop');
+            return;
+        }
         this.pipeline.register($.proxy(function () {
+                if (this.forceStop()) {
+                    clog('force task to stop');
+                    return;
+                }
                 this.state.currentUser = user;
                 this.tab.onConnect($.proxy(function () {
                     clog('connect after going to profile');
@@ -602,8 +676,8 @@ followTask.prototype.followFromFetchedUsers = function () {
                 username: user.username,
                 userId: user.id
             }, $.proxy(this.followFromProfileResponse, this));
+    }, this));
 
-    }
     this.pipeline.start();
 };
 
@@ -681,7 +755,6 @@ followTask.prototype.followFromProfileResponse = function (pipeline, msg) {
         //خطا
         clog('follow failed!', this.state.currentUser);
         pipeline.next();
-        return;
     }
 }
 
@@ -699,9 +772,17 @@ followTask.prototype.endWaiting = function () {
  */
 followTask.prototype.fetchFollowersFromList = function () {
     clog('follow followers without check');
+    if (this.forceStop()) {
+        clog('force task to stop');
+        return;
+    }
     this.tab.onConnect($.proxy(function () {
         clog('connect after going to profile');
         this.tab.removeOnConnect();
+        if (this.forceStop()) {
+            clog('force task to stop');
+            return;
+        }
         this.pipeline = this.tab.createPipeline($.proxy(function () {
             this.state.currentStep = 'followFromFetchedUsers';
             this.followFromFetchedUsers();
@@ -722,13 +803,21 @@ followTask.prototype.fetchFollowersFromList = function () {
  */
 followTask.prototype.fetchFollowersFromListCycle = function (pipeline, msg) {
     clog('get users info:', msg);
+    if (this.forceStop()) {
+        clog('force task to stop');
+        return;
+    }
     if (msg.result) {
         if (msg.response.status == 200) {
             var data = msg.response.data;
             if (data.status == 'ok') {
                 var addFlag = 0;
 
-               data.followed_by.nodes.forEach($.proxy(function(node){
+                data.followed_by.nodes.forEach($.proxy(function (node) {
+                    if (this.forceStop()) {
+                        clog('force task to stop');
+                        return;
+                    }
                     if (this.state.users.length >= this.state.count) {
                         clog('desired count is reached');
                         return;
@@ -753,12 +842,16 @@ followTask.prototype.fetchFollowersFromListCycle = function (pipeline, msg) {
                     } else {
                         clog('user already follow / follow requested :', node);
                     }
-                },this));
+                }, this));
 
                 // صبر تا پایان نتایج دیتابیس
-                waitUntil(function () {
-                    return addFlag == 0;
-                }, $.proxy(function () {
+                waitUntil($.proxy(function () {
+                    return this.forceStop() || addFlag == 0;
+                },this), $.proxy(function () {
+                    if (this.forceStop()) {
+                        clog('force task to stop');
+                        return;
+                    }
                     if (this.state.users.length < this.state.count) {
                         if (data.followed_by.page_info.has_next_page) {
                             pipeline.register('loadMoreFollowers', {}, $.proxy(this.fetchFollowersFromListCycle, this));
@@ -788,52 +881,6 @@ followTask.prototype.fetchFollowersFromListCycle = function (pipeline, msg) {
         //خطا
         clog('get users failed!');
         pipeline.next();
-    }
-};
-
-/**
- * بررسی درخواست دنبال کردن کاربر
- * msg
- *  result: boolean
- *  request:
- *    status: status code
- *    data: server response
- */
-followTask.prototype.followRequested = function (pipeline, msg) {
-    clog('follow response :', msg);
-    if (msg.result) {
-        if (msg.response.status == 200) {
-            if (msg.response.data.status == 'ok') {
-                this.state.count--;
-                var currentUser = pipeline.getCurrentStep().args;
-                updateFollowHistory(this.tabId, {
-                    id: currentUser.userId,
-                    username: currentUser.username,
-                    status: msg.response.data.result,
-                    datetime: new Date().getTime()
-                });
-
-                if (this.state.count < 1) {
-                    clog('pipeline completed', this.state);
-                    this.persist('completed');
-                    pipeline.completed(this);
-                    return;
-                } else {
-                    this.persist();
-                    pipeline.next();
-                    return;
-                }
-            } else {
-                clog('follow failed!: server error', this.state.currentUser);
-            }
-        } else {
-            clog('follow failed!: network error', this.state.currentUser);
-        }
-    } else {
-        //خطا
-        clog('follow failed!', this.state.currentUser);
-        pipeline.next();
-        return;
     }
 };
 
@@ -888,12 +935,29 @@ followTask.prototype.getStatus = function () {
  */
 followTask.prototype.completed = function () { /* nothing */ };
 
+/**
+ * بررسی پایان کار اجباری
+ */
+followTask.prototype.forceStop = function () {
+    return this.stopSignal;
+}
+
+/**
+ * متوقف کردن وظیفه
+ */
+followTask.prototype.stop = function () {
+    this.stopSignal = true;
+    if (this.pipeline != undefined) {
+        this.pipeline.stop();
+    }
+}
 // خط لوله اجرای دستور
 var pipeline = function (port, onCompleted) {
     this.steps = new Array();
     this.index = 0;
     this.port = port;
     this.onCompleted = onCompleted;
+    this.forceStop = false;
 }
 
 pipeline.prototype.register = function (action, args, fn) {
@@ -940,6 +1004,9 @@ pipeline.prototype.registerAfter = function (action, args, fn) {
 }
 
 pipeline.prototype.start = function () {
+    if(this.forceStop){
+        return;
+    }
     this.index = -1;
     this.startTime = new Date();
     this.status = 'Started';
@@ -947,6 +1014,9 @@ pipeline.prototype.start = function () {
 }
 
 pipeline.prototype.next = function (steps, seconds) {
+    if(this.forceStop){
+        return;
+    }
     if (seconds == undefined) {
         if (this.status != 'Started') {
             clog('pipeline is not started');
@@ -970,13 +1040,17 @@ pipeline.prototype.next = function (steps, seconds) {
             this.completed('Completed');
         }
     } else {
-        setTimeout($.proxy(function () {
+        this.timeoutId = setTimeout($.proxy(function () {
+            delete this.timeoutId;
             this.next(steps);
         }, this), seconds * 1000);
     }
 }
 
 pipeline.prototype.previous = function (steps, seconds) {
+    if(this.forceStop){
+        return;
+    }
     if (seconds == undefined) {
         if (this.status != 'Started') {
             clog('pipeline is not started');
@@ -1000,7 +1074,8 @@ pipeline.prototype.previous = function (steps, seconds) {
             this.completed('Completed');
         }
     } else {
-        setTimeout($.proxy(function () {
+        this.timeoutId = setTimeout($.proxy(function () {
+            delete this.timeoutId;
             this.previous(steps);
         }, this), seconds * 1000);
     }
@@ -1025,8 +1100,15 @@ pipeline.prototype.getCurrentStep = function () {
 }
 
 pipeline.prototype.retry = function (seconds) {
+    if(this.forceStop){
+        return;
+    }
     seconds = seconds || 0.1;
-    setTimeout($.proxy(function () {
+    this.timeoutId = setTimeout($.proxy(function () {
+        delete this.timeoutId;
+        if(this.forceStop){
+            return;
+        }
         if (this.status != 'Started') {
             clog('retry failed: pipeline is not started');
             return;
@@ -1037,6 +1119,13 @@ pipeline.prototype.retry = function (seconds) {
             step.callback(this, msg);
         }, this));
     }, this), seconds * 1000);
+}
+
+pipeline.prototype.stop = function(){
+    this.forceStop = true;
+    if(this.timeoutId!=undefined){
+        clearTimeout(this.timeoutId);
+    }
 }
 
 /**
@@ -1125,6 +1214,36 @@ var popupCtrl = {
             }
         });
 
+    },
+    stopTask: function(port,msg) {
+        clog('stop task',msg );
+        chrome.tabs.query({
+            active: true,
+            currentWindow: true
+        }, function (items) {
+            if (items.length > 0) {
+                if (tabs[items[0].id].task != undefined) {
+                    clog('stop task:task found');
+                    taskService.stop(tabs[items[0].id].task);
+                    port.postMessage({
+                        action: 'callback.stopTask',
+                        result: true
+                    });
+                } else {
+                    clog('stop task:task not found');
+                    port.postMessage({
+                        action: 'callback.stopTask',
+                        result: false
+                    });
+                }
+            }else{
+                clog('stop task:tab not found');
+                port.postMessage({
+                    action: 'callback.stopTask',
+                    result: false
+                });
+            }
+        });
     }
 };
 
@@ -1215,62 +1334,65 @@ tab.prototype.getViewer = function()
 
 // تولید کننده کار
 var taskService = {
-  waitingList: new Array(),
-  create: function (args) {
-    var task;
-    switch (args.type) {
-      case 'Follow':
-        task = new followTask(args);
-        break;
-      case 'Unfollow':
-        task = new unfollowTask(args);
-        break;
-    }
-    if (task === undefined) {
-      return false;
-    }
-    task.persist();
-    //راه اندازی خودکار
-    if (args.startType == 'auto') {
-      this.runTask(task);
-    }
-    return true;
-  },
-  runTask: function (task) {
-    chrome.tabs.query({
-      active: true,
-      currentWindow: true
-    }, $.proxy(function (items) {
-      //اولویت با تب جاری است
-      if (items.length > 0 && tabs[items[0].id].task !== undefined) {
-        tabs[items[0].id].task = task;
-        task.completed = $.proxy(this.taskCompleted, this);
-        task.start(tabs[items[0].id]);
-      } else {
-        //بررسی سایر تب ها
-        var findFlag = false;
-        for (var i in tabs) {
-          if (tabs[i].task === undefined) {
-            tabs[i].task = task;
-            findFlag = true;
-            task.completed = $.proxy(this.taskCompleted, this);
-            task.start(tabs[i]);
-          }
+    waitingList: new Array(),
+    create: function (args) {
+        var task;
+        switch (args.type) {
+        case 'Follow':
+            task = new followTask(args);
+            break;
+        case 'Unfollow':
+            task = new unfollowTask(args);
+            break;
         }
-        if (!findFlag) {
-          this.waitingList.push(task.id);
+        if (task === undefined) {
+            return false;
         }
-      }
-    }, this));
-  },
-  taskCompleted: function (task) {
-    if (tabs[task.tabId] !== undefined) {
-      delete tabs[task.tabId].task;
+        //فعلن نیازی به این کار نیست
+        //task.persist();
+        //راه اندازی خودکار
+        if (args.startType == 'auto') {
+            this.run(task);
+        }
+        return true;
+    },
+    run: function (task) {
+        chrome.tabs.query({
+            active: true,
+            currentWindow: true
+        }, $.proxy(function (items) {
+            //اولویت با تب جاری است
+            if (items.length > 0 && tabs[items[0].id].task !== undefined) {
+                tabs[items[0].id].task = task;
+                task.completed = $.proxy(this.taskCompleted, this);
+                task.start(tabs[items[0].id]);
+            } else {
+                //بررسی سایر تب ها
+                var findFlag = false;
+                for (var i in tabs) {
+                    if (tabs[i].task === undefined) {
+                        tabs[i].task = task;
+                        findFlag = true;
+                        task.completed = $.proxy(this.taskCompleted, this);
+                        task.start(tabs[i]);
+                    }
+                }
+                if (!findFlag) {
+                    this.waitingList.push(task.id);
+                }
+            }
+        }, this));
+    },
+    taskCompleted: function (task) {
+        if (tabs[task.tabId] !== undefined) {
+            delete tabs[task.tabId].task;
+        }
+    },
+    stop: function(task){
+        task.stop();
+        this.taskCompleted(task);
     }
-  }
 }
-
-
 /**
  * وظیفه آنفالو کردن کاربران
  */
@@ -1284,7 +1406,7 @@ var unfollowTask = function (args) {
         this.state.profileViewsCount = 0;
         this.state.retakeRequestsCount = 0;
         this.state.fetchedUsersCount = 0;
-        this.state.progress;
+        this.state.progress = 0;
         if (this.state.pattern == 'auto') {
             this.state.currentStep = 'fetchFollowHistories';
         } else {
@@ -1321,13 +1443,19 @@ unfollowTask.prototype.completed = function () { /* nothing */ };
  */
 unfollowTask.prototype.fetchFromFollowings = function () {
     clog('fetch from followings list');
+    if (this.forceStop()) {
+        return;
+    }
     this.tab.onConnect($.proxy(function () {
         clog('connect after going to home');
         this.tab.removeOnConnect();
+        if (this.forceStop()) {
+            return;
+        }
 
         // ایجاد پایپ لاین
         this.pipeline = this.tab.createPipeline($.proxy(function () {
-            clog('unfollow completed!');
+            clog('fetch completed!');
             this.completed(this);
         }, this));
 
@@ -1344,10 +1472,13 @@ unfollowTask.prototype.fetchFromFollowings = function () {
 };
 
 /**
-* چرخه استخراج فالوینگ ها
-*/
+ * چرخه استخراج فالوینگ ها
+ */
 unfollowTask.prototype.fetchFollowingsCycle = function (pipeline, msg) {
     clog('fetch followings response:', msg);
+    if (this.forceStop()) {
+        return;
+    }
     if (msg.result) {
         if (msg.response.status == 200) {
             var data = msg.response.data;
@@ -1398,7 +1529,9 @@ unfollowTask.prototype.fetchFollowingsCycle = function (pipeline, msg) {
  * استخراج کاربران از تاریخچه
  */
 unfollowTask.prototype.fetchFollowHistories = function () {
-
+    if (this.forceStop()) {
+        return;
+    }
     // ایجاد پایپ لاین
     this.pipeline = this.tab.createPipeline($.proxy(function () {
         clog('task completed', this.state);
@@ -1406,6 +1539,9 @@ unfollowTask.prototype.fetchFollowHistories = function () {
     }, this));
 
     var createPipeline = $.proxy(function (followHistory) {
+        if (this.forceStop()) {
+            return;
+        }
         this.pipeline
             .register($.proxy(function () {
                 this.state.currentUser = followHistory;
@@ -1431,6 +1567,9 @@ unfollowTask.prototype.fetchFollowHistories = function () {
     this.tab.postMessage({
         action: 'getCurrentUser'
     }, $.proxy(function (msg) {
+        if (this.forceStop()) {
+            return;
+        }
         if (msg.result) {
             var db = getDb(msg.user.id);
             var equals = ['following'];
@@ -1440,9 +1579,12 @@ unfollowTask.prototype.fetchFollowHistories = function () {
 
             db.followHistories
                 .orderBy('datetime')
-                .and(x => $.inArray(x.status,equals)!=-1)
+                .and(x => $.inArray(x.status, equals) != -1)
                 .limit(this.state.count)
                 .toArray($.proxy(function (items) {
+                    if (this.forceStop()) {
+                        return;
+                    }
                     for (var i in items) {
                         clog('history', items[i]);
                         createPipeline(items[i]);
@@ -1461,7 +1603,7 @@ unfollowTask.prototype.fetchFollowHistories = function () {
  * دریافت اطلاعات پروفایل
  */
 unfollowTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
-    this.state.progress = pipeline.index/pipeline.steps.length *100;
+    this.state.progress = pipeline.index / pipeline.steps.length * 100;
     clog('get profile info reponse', msg);
     if (msg.result) {
         // بررسی فالو شدن بوسیله ما
@@ -1525,15 +1667,15 @@ unfollowTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
 };
 
 /**
-* آنفالو از صفحه
-*/
+ * آنفالو از صفحه
+ */
 unfollowTask.prototype.unfollowFromPageResponse = function (pipeline, msg) {
     clog('unfollow response', msg);
     if (msg.result) {
         if (msg.response.status == 200) {
-            if(this.state.currentUser.currentState=='following'){
+            if (this.state.currentUser.currentState == 'following') {
                 this.state.unfollowsCount++;
-            }else{
+            } else {
                 this.state.retakeRequestsCount++;
             }
 
@@ -1547,10 +1689,10 @@ unfollowTask.prototype.unfollowFromPageResponse = function (pipeline, msg) {
             var rnd = Math.floor(Math.random() * 6) + 5;
             clog('block or network error, retry ' + rnd + 'min again', this.state);
             //بلاک شدن یا عدم اتصال به اینترنت و ..
-             var waitUntil = new Date();
-            waitUntil.setSeconds(waitUntil.getSeconds()+ rnd * 60);
+            var waitUntil = new Date();
+            waitUntil.setSeconds(waitUntil.getSeconds() + rnd * 60);
             this.state.waitUntil = waitUntil;
-            setTimeout($.proxy(this.endWaiting,this),rnd * 60 * 1000);
+            setTimeout($.proxy(this.endWaiting, this), rnd * 60 * 1000);
 
             pipeline.previous(3, rnd * 60);
         }
@@ -1562,36 +1704,73 @@ unfollowTask.prototype.unfollowFromPageResponse = function (pipeline, msg) {
 }
 
 /**
-* پایان دادن به صبر
-*/
-unfollowTask.prototype.endWaiting = function(){
+ * پایان دادن به صبر
+ */
+unfollowTask.prototype.endWaiting = function () {
     this.state.waitUntil = undefined;
 }
 
 /**
-* دریافت وضعیت وظیفه
-*/
-unfollowTask.prototype.getStatus = function(){
-    var currentStep;
-    switch(this.state.currentStep){
-        case 'fetchFromFollowings':
-            currentStep = 'استخراج فالوینگ ها';
-            break;
-        case 'fetchFollowHistories':
-            currentStep = 'آنفالو کردن کاربران';
-            break;
+ * دریافت وضعیت وظیفه
+ */
+unfollowTask.prototype.getStatus = function () {
+    var currentStep,
+        states = [];
+    switch (this.state.currentStep) {
+    case 'fetchFromFollowings':
+        currentStep = 'استخراج فالوینگ ها';
+        states = [
+            {
+                name: 'تعداد کاربر استخراج شده',
+                value: this.state.fetchedUsersCount
+                }
+            ];
+        break;
+    case 'fetchFollowHistories':
+        currentStep = 'آنفالو کردن کاربران';
+        states = [
+            {
+                name: 'تعداد',
+                value: this.state.count
+            },
+            {
+                name: 'صفحات باز شده',
+                value: this.state.profileViewsCount
+            },
+            {
+                name: 'کاربران آنفالو شده',
+                value: this.state.unfollowsCount
+            },
+            {
+                name: 'درخواست های پس گرفته شده',
+                value: this.state.retakeRequestsCount
+            }
+        ];
+        break;
     }
 
     return {
         type: 'آنفالو',
-        progress : this.state.progress>100?100:Math.floor(this.state.progress),
-        step  : currentStep,
-        waitUntil:this.state.waitUntil!=undefined?this.state.waitUntil.toISOString():undefined,
-        states:[
-            {name:'تعداد',value:this.state.count},
-            {name:'صفحات باز شده',value:this.state.profileViewsCount},
-            {name:'کاربران آنفالو شده',value:this.state.unfollowsCount},
-            {name:'درخواست های پس گرفته شده',value:this.state.retakeRequestsCount}
-        ]
+        progress: this.state.progress > 100 ? 100 : Math.floor(this.state.progress),
+        step: currentStep,
+        waitUntil: this.state.waitUntil != undefined ? this.state.waitUntil.toISOString() : undefined,
+        states: states
     };
 };
+
+/**
+ * بررسی پایان کار اجباری
+ */
+unfollowTask.prototype.forceStop = function () {
+    return this.stopSignal;
+}
+
+/**
+ * متوقف کردن وظیفه
+ */
+unfollowTask.prototype.stop = function () {
+    this.stopSignal = true;
+    if (this.pipeline != undefined) {
+        this.pipeline.stop();
+    }
+}

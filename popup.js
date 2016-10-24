@@ -127,11 +127,7 @@ var mainCtrl = {
         $('.running-task').remove();
         if(msg.result){
             $('section#main').find('ul').hide();
-            $('.button-error').on('click',function(e){
-                postMessage({
-                   action:'stopTask'
-                });
-            });
+
             if(msg.task.waitUntil!=undefined){
                 var wait = new Date(Date.parse(msg.task.waitUntil))- new Date();
                 if(wait>0){
@@ -142,6 +138,7 @@ var mainCtrl = {
             }
             var html = getTemplate('running-task',msg.task);
             $(html).insertBefore('ul');
+            $('#btn-stop').on('click',$.proxy(this.stopTask,this));
             setTimeout($.proxy(this.getCurrentTask,this),500);
         }else{
             $('section#main').find('ul').show();
@@ -155,6 +152,22 @@ var mainCtrl = {
                 var newURL = "http://www.reyhansoft.com/instachi/donate-us";
                 chrome.tabs.create({ url: newURL });
             });
+        }
+    },
+
+    stopTask: function(e){
+        e.preventDefault();
+        clog('call for stop');
+        postMessage({
+            action: 'stopTask'
+        }, $.proxy(this.stopTaskResponse, this));
+    },
+    stopTaskResponse: function(msg){
+        clog('stop task response', msg);
+        if (msg.result) {
+            loadCtrl('mainCtrl');
+        } else {
+            error(msg.message);
         }
     }
 }

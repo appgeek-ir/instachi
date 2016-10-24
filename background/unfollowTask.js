@@ -1,4 +1,3 @@
-
 /**
  * وظیفه آنفالو کردن کاربران
  */
@@ -12,7 +11,7 @@ var unfollowTask = function (args) {
         this.state.profileViewsCount = 0;
         this.state.retakeRequestsCount = 0;
         this.state.fetchedUsersCount = 0;
-        this.state.progress;
+        this.state.progress = 0;
         if (this.state.pattern == 'auto') {
             this.state.currentStep = 'fetchFollowHistories';
         } else {
@@ -49,13 +48,19 @@ unfollowTask.prototype.completed = function () { /* nothing */ };
  */
 unfollowTask.prototype.fetchFromFollowings = function () {
     clog('fetch from followings list');
+    if (this.forceStop()) {
+        return;
+    }
     this.tab.onConnect($.proxy(function () {
         clog('connect after going to home');
         this.tab.removeOnConnect();
+        if (this.forceStop()) {
+            return;
+        }
 
         // ایجاد پایپ لاین
         this.pipeline = this.tab.createPipeline($.proxy(function () {
-            clog('unfollow completed!');
+            clog('fetch completed!');
             this.completed(this);
         }, this));
 
@@ -72,10 +77,13 @@ unfollowTask.prototype.fetchFromFollowings = function () {
 };
 
 /**
-* چرخه استخراج فالوینگ ها
-*/
+ * چرخه استخراج فالوینگ ها
+ */
 unfollowTask.prototype.fetchFollowingsCycle = function (pipeline, msg) {
     clog('fetch followings response:', msg);
+    if (this.forceStop()) {
+        return;
+    }
     if (msg.result) {
         if (msg.response.status == 200) {
             var data = msg.response.data;
@@ -126,7 +134,9 @@ unfollowTask.prototype.fetchFollowingsCycle = function (pipeline, msg) {
  * استخراج کاربران از تاریخچه
  */
 unfollowTask.prototype.fetchFollowHistories = function () {
-
+    if (this.forceStop()) {
+        return;
+    }
     // ایجاد پایپ لاین
     this.pipeline = this.tab.createPipeline($.proxy(function () {
         clog('task completed', this.state);
@@ -134,6 +144,9 @@ unfollowTask.prototype.fetchFollowHistories = function () {
     }, this));
 
     var createPipeline = $.proxy(function (followHistory) {
+        if (this.forceStop()) {
+            return;
+        }
         this.pipeline
             .register($.proxy(function () {
                 this.state.currentUser = followHistory;
@@ -159,6 +172,9 @@ unfollowTask.prototype.fetchFollowHistories = function () {
     this.tab.postMessage({
         action: 'getCurrentUser'
     }, $.proxy(function (msg) {
+        if (this.forceStop()) {
+            return;
+        }
         if (msg.result) {
             var db = getDb(msg.user.id);
             var equals = ['following'];
@@ -168,9 +184,12 @@ unfollowTask.prototype.fetchFollowHistories = function () {
 
             db.followHistories
                 .orderBy('datetime')
-                .and(x => $.inArray(x.status,equals)!=-1)
+                .and(x => $.inArray(x.status, equals) != -1)
                 .limit(this.state.count)
                 .toArray($.proxy(function (items) {
+                    if (this.forceStop()) {
+                        return;
+                    }
                     for (var i in items) {
                         clog('history', items[i]);
                         createPipeline(items[i]);
@@ -189,7 +208,7 @@ unfollowTask.prototype.fetchFollowHistories = function () {
  * دریافت اطلاعات پروفایل
  */
 unfollowTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
-    this.state.progress = pipeline.index/pipeline.steps.length *100;
+    this.state.progress = pipeline.index / pipeline.steps.length * 100;
     clog('get profile info reponse', msg);
     if (msg.result) {
         // بررسی فالو شدن بوسیله ما
@@ -253,15 +272,15 @@ unfollowTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
 };
 
 /**
-* آنفالو از صفحه
-*/
+ * آنفالو از صفحه
+ */
 unfollowTask.prototype.unfollowFromPageResponse = function (pipeline, msg) {
     clog('unfollow response', msg);
     if (msg.result) {
         if (msg.response.status == 200) {
-            if(this.state.currentUser.currentState=='following'){
+            if (this.state.currentUser.currentState == 'following') {
                 this.state.unfollowsCount++;
-            }else{
+            } else {
                 this.state.retakeRequestsCount++;
             }
 
@@ -275,10 +294,10 @@ unfollowTask.prototype.unfollowFromPageResponse = function (pipeline, msg) {
             var rnd = Math.floor(Math.random() * 6) + 5;
             clog('block or network error, retry ' + rnd + 'min again', this.state);
             //بلاک شدن یا عدم اتصال به اینترنت و ..
-             var waitUntil = new Date();
-            waitUntil.setSeconds(waitUntil.getSeconds()+ rnd * 60);
+            var waitUntil = new Date();
+            waitUntil.setSeconds(waitUntil.getSeconds() + rnd * 60);
             this.state.waitUntil = waitUntil;
-            setTimeout($.proxy(this.endWaiting,this),rnd * 60 * 1000);
+            setTimeout($.proxy(this.endWaiting, this), rnd * 60 * 1000);
 
             pipeline.previous(3, rnd * 60);
         }
@@ -290,36 +309,73 @@ unfollowTask.prototype.unfollowFromPageResponse = function (pipeline, msg) {
 }
 
 /**
-* پایان دادن به صبر
-*/
-unfollowTask.prototype.endWaiting = function(){
+ * پایان دادن به صبر
+ */
+unfollowTask.prototype.endWaiting = function () {
     this.state.waitUntil = undefined;
 }
 
 /**
-* دریافت وضعیت وظیفه
-*/
-unfollowTask.prototype.getStatus = function(){
-    var currentStep;
-    switch(this.state.currentStep){
-        case 'fetchFromFollowings':
-            currentStep = 'استخراج فالوینگ ها';
-            break;
-        case 'fetchFollowHistories':
-            currentStep = 'آنفالو کردن کاربران';
-            break;
+ * دریافت وضعیت وظیفه
+ */
+unfollowTask.prototype.getStatus = function () {
+    var currentStep,
+        states = [];
+    switch (this.state.currentStep) {
+    case 'fetchFromFollowings':
+        currentStep = 'استخراج فالوینگ ها';
+        states = [
+            {
+                name: 'تعداد کاربر استخراج شده',
+                value: this.state.fetchedUsersCount
+                }
+            ];
+        break;
+    case 'fetchFollowHistories':
+        currentStep = 'آنفالو کردن کاربران';
+        states = [
+            {
+                name: 'تعداد',
+                value: this.state.count
+            },
+            {
+                name: 'صفحات باز شده',
+                value: this.state.profileViewsCount
+            },
+            {
+                name: 'کاربران آنفالو شده',
+                value: this.state.unfollowsCount
+            },
+            {
+                name: 'درخواست های پس گرفته شده',
+                value: this.state.retakeRequestsCount
+            }
+        ];
+        break;
     }
 
     return {
         type: 'آنفالو',
-        progress : this.state.progress>100?100:Math.floor(this.state.progress),
-        step  : currentStep,
-        waitUntil:this.state.waitUntil!=undefined?this.state.waitUntil.toISOString():undefined,
-        states:[
-            {name:'تعداد',value:this.state.count},
-            {name:'صفحات باز شده',value:this.state.profileViewsCount},
-            {name:'کاربران آنفالو شده',value:this.state.unfollowsCount},
-            {name:'درخواست های پس گرفته شده',value:this.state.retakeRequestsCount}
-        ]
+        progress: this.state.progress > 100 ? 100 : Math.floor(this.state.progress),
+        step: currentStep,
+        waitUntil: this.state.waitUntil != undefined ? this.state.waitUntil.toISOString() : undefined,
+        states: states
     };
 };
+
+/**
+ * بررسی پایان کار اجباری
+ */
+unfollowTask.prototype.forceStop = function () {
+    return this.stopSignal;
+}
+
+/**
+ * متوقف کردن وظیفه
+ */
+unfollowTask.prototype.stop = function () {
+    this.stopSignal = true;
+    if (this.pipeline != undefined) {
+        this.pipeline.stop();
+    }
+}
