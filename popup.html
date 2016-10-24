@@ -129,8 +129,19 @@
         <fieldset>
             <legend>آنفالو کردن کاربران</legend>
 
-            <div style="padding-bottom:10px;border-bottom: dashed 1px #aaa;">
-            <button type="button" class="pure-button button-success" id="btn-sync">استخراج کاربران از لیست فالوینگ ها</button>
+            <div style="padding-bottom:10px;border-bottom: dashed 1px #aaa;width:100%;overflow:auto;text-align:center;">
+                <h3 style="margin:0;">تاریخچه فالوها</h3>
+                <div style="display:inline;width:50%;float:right;text-align: center;">
+                    <h2 style="margin-bottom:0;" id="followings-count">0</h2>
+                    <span>تعداد فالوینگ</span>
+                </div>
+                <div style="display:inline;width:50%;float:right;text-align: center;">
+                    <h2 style="margin-bottom:0;" id="requests-count">0</h2>
+                    <span>تعداد درخواست فالو</span>
+                </div>
+                <div style="padding-top:10px;overflow: auto;width: 100%;">
+                    <button type="button" class="pure-button button-success" id="btn-sync">استخراج کاربران از لیست فالوینگ</button>
+                </div>
             </div>
 
             <label for="count">تعداد</label>

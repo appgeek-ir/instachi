@@ -281,7 +281,8 @@ window['unfollowCtrl'] = {
         $main.find('#btn-sync').on('click',function(e){
             that.createTask('manual');
         });
-
+        postMessage({action:'getFollowingsCount'}, $.proxy(this.getFollowingsCountResponse, this));
+        postMessage({action:'getRequestsCount'}, $.proxy(this.getRequestsCountResponse, this));
     },
 
     /**
@@ -309,6 +310,24 @@ window['unfollowCtrl'] = {
             error(msg.message);
         }
     },
+
+    getRequestsCountResponse: function(msg){
+        clog('get requests count response',msg);
+        if(msg.result){
+            $('#requests-count').text(msg.count);
+        }else{
+
+        }
+    },
+
+    getFollowingsCountResponse: function(msg){
+        clog('get followings count response',msg);
+        if(msg.result){
+            $('#followings-count').text(msg.count);
+        }else{
+
+        }
+    }
 };
 
 

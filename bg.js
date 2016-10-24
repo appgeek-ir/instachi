@@ -312,6 +312,7 @@ Zepto(function () {
         }
     });
 });
+
 /**
  * سازنده وظیفه فالو
  */
@@ -951,6 +952,7 @@ followTask.prototype.stop = function () {
         this.pipeline.stop();
     }
 }
+
 // خط لوله اجرای دستور
 var pipeline = function (port, onCompleted) {
     this.steps = new Array();
@@ -1185,7 +1187,7 @@ var popupCtrl = {
         });
     },
     getCurrentTask: function (port, msg) {
-        clog('get current task',msg );
+        clog('get current task', msg);
         chrome.tabs.query({
             active: true,
             currentWindow: true
@@ -1215,8 +1217,8 @@ var popupCtrl = {
         });
 
     },
-    stopTask: function(port,msg) {
-        clog('stop task',msg );
+    stopTask: function (port, msg) {
+        clog('stop task', msg);
         chrome.tabs.query({
             active: true,
             currentWindow: true
@@ -1236,7 +1238,7 @@ var popupCtrl = {
                         result: false
                     });
                 }
-            }else{
+            } else {
                 clog('stop task:tab not found');
                 port.postMessage({
                     action: 'callback.stopTask',
@@ -1244,9 +1246,114 @@ var popupCtrl = {
                 });
             }
         });
+    },
+    /**
+     * تعداد فالوینگ ها
+     */
+    getFollowingsCount: function (port, msg) {
+        clog('get followings count', msg);
+        chrome.tabs.query({
+            active: true,
+            currentWindow: true
+        }, function (items) {
+            if (items.length > 0) {
+                if (tabs[items[0].id] !== undefined) {
+                    var viewer = tabs[items[0].id].getViewer();
+                    clog('get viewer response: ', viewer);
+                    if (viewer != null) {
+                        var db = getDb(viewer.id);
+                        db.followHistories.where('status').equals('following').count(function (count) {
+                            port.postMessage({
+                                action: 'callback.getFollowingsCount',
+                                result: true,
+                                count: count
+                            });
+                        }).catch(function (err) {
+                            clog('db count of followings error:' + err);
+                            port.postMessage({
+                                action: 'callback.getFollowingsCount',
+                                result: false
+                            });
+                        });
+                    } else {
+                        clog('user not logged in');
+                        port.postMessage({
+                            action: 'callback.getFollowingsCount',
+                            result: false
+                        });
+                    }
+
+                } else {
+                    clog('get followings count:tab is undefined');
+                    port.postMessage({
+                        action: 'callback.getFollowingsCount',
+                        result: false
+                    });
+                }
+
+            } else {
+                clog('get followings count:tab not found');
+                port.postMessage({
+                    action: 'callback.getFollowingsCount',
+                    result: false
+                });
+            }
+
+        });
+    },
+    getRequestsCount: function (port, msg) {
+        clog('get requests count', msg);
+        chrome.tabs.query({
+            active: true,
+            currentWindow: true
+        }, function (items) {
+            if (items.length > 0) {
+                if (tabs[items[0].id] !== undefined) {
+                    var viewer = tabs[items[0].id].getViewer();
+                    clog('get viewer response: ', viewer);
+                    if (viewer != null) {
+                        var db = getDb(viewer.id);
+                        db.followHistories.where('status').equals('requested').count(function (count) {
+                            port.postMessage({
+                                action: 'callback.getRequestsCount',
+                                result: true,
+                                count: count
+                            });
+                        }).catch(function (err) {
+                            clog('db count of requests error:' + err);
+                            port.postMessage({
+                                action: 'callback.getRequestsCount',
+                                result: false
+                            });
+                        });
+                    } else {
+                        clog('user not logged in');
+                        port.postMessage({
+                            action: 'callback.getRequestsCount',
+                            result: false
+                        });
+                    }
+
+                } else {
+                    clog('get requests count:tab is undefined');
+                    port.postMessage({
+                        action: 'callback.getRequestsCount',
+                        result: false
+                    });
+                }
+
+
+            } else {
+                clog('get requests count:tab not found');
+                port.postMessage({
+                    action: 'callback.getRequestsCount',
+                    result: false
+                });
+            }
+
+        });
     }
 };
-
 /**
  * کلاس تب
  */
@@ -1393,6 +1500,7 @@ var taskService = {
         this.taskCompleted(task);
     }
 }
+
 /**
  * وظیفه آنفالو کردن کاربران
  */
