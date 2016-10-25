@@ -132,28 +132,7 @@ var controller = {
      * id: شناسه بازگشت
      */
     gotoHomePage: function (msg) {
-        /*
-        var profileLink = document.querySelector('#react-root>section>nav>div>div>div>div:nth-child(3)>div>div:nth-child(3)>a');
-        if (profileLink != null) {
-            var username;
-            Execute(function (id) {
-                window.getViewerUsername(id);
-            }, function (result) {
-                username = result;
-            });
-            profileLink.click();
-            checkPeriodically(function () {
-                return window.location.pathname == '/' + username + '/';
-            }, function (result) {
-                postCallback(msg.callbackId, {
-                    result: true
-                });
-            });
-        } else {
-            postCallback(msg.callbackId, {
-                result: false
-            });
-        }*/
+
         var profileLink = document.querySelector('#react-root>section>nav>div>div>div>div:nth-child(3)>div>div:nth-child(3)>a');
         if (profileLink != null) {
             window.location.href = profileLink.getAttribute('href');
@@ -285,6 +264,9 @@ var controller = {
             });
         }
     },
+    /**
+    * بازگرداندن نام کاربری صفحه ای که درون آن هستیم
+    */
     getCurrentPage: function (msg) {
         clog('get current page request:', msg)
         var profileLink = document.querySelector('span>section>main>article>header>div:nth-child(2)>div>h1');

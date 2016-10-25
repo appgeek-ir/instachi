@@ -149,7 +149,7 @@ var mainCtrl = {
             });
             $('section#main').find('#donation').on('click',function(e){
                 e.preventDefault();
-                var newURL = "http://www.reyhansoft.com/instachi/donate-us";
+                var newURL = "http://www.reyhansoft.com/instachi/donate";
                 chrome.tabs.create({ url: newURL });
             });
         }
@@ -330,6 +330,25 @@ window['unfollowCtrl'] = {
     }
 };
 
+
+window['aboutCtrl'] = {
+
+    init: function(){
+        showTemplate('about');
+        var $main = $('section#main');
+        $main.find('a.button-return').on('click', function (e) {
+            e.preventDefault();
+            loadCtrl('mainCtrl');
+        });
+
+        $main.find('#site-link').on('click',function(e){
+            e.preventDefault();
+            var newURL = "http://www.reyhansoft.com/";
+            chrome.tabs.create({ url: newURL });
+        });
+    }
+
+}
 
 //initialize
 Zepto(function ($) {
