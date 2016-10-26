@@ -509,7 +509,7 @@ followTask.prototype.openPostResponse = function (pipeline, msg) {
                         if (this.state.checkFollowHistory) {
                             addFlag++;
                             clog('check user follow history', item.user);
-                            hasFollowHistory(this.tab.userId, item.user.id, $.proxy(function (exists) {
+                            hasFollowHistory(this.tab.getViewer().id, item.user.id, $.proxy(function (exists) {
                                 addFlag--;
                                 if (!exists) {
                                     clog('add user to list:', item.user);
@@ -586,7 +586,7 @@ followTask.prototype.loadMoreCommentsResponse = function (pipeline, msg) {
                         if (this.state.checkFollowHistory) {
                             addFlag++;
                             clog('check user follow history', item.user);
-                            hasFollowHistory(this.tab.userId, item.user.id, $.proxy(function (exists) {
+                            hasFollowHistory(this.tab.getViewer().id, item.user.id, $.proxy(function (exists) {
                                 addFlag--;
                                 if (!exists) {
                                     clog('add user to list:', item.user);
@@ -827,7 +827,7 @@ followTask.prototype.fetchFollowersFromListCycle = function (pipeline, msg) {
                         if (this.state.checkFollowHistory) {
                             addFlag++;
                             clog('check user follow history', node);
-                            hasFollowHistory(this.tab.userId, node.id, $.proxy(function (exists) {
+                            hasFollowHistory(this.tab.getViewer().id, node.id, $.proxy(function (exists) {
                                 addFlag--;
                                 if (!exists) {
                                     clog('add user to list:', node);
@@ -1406,10 +1406,14 @@ tab.prototype.setPort = function (port) {
     port.onDisconnect.addListener(function (msg) {
 
     });
-    this.onConnect();
 
+
+    clog('get shared data');
     //دریافت اطلاعات صفحه
     this.postMessage({ action:'getSharedData' },$.proxy(function(msg){
+        //صدا زدن پس از گرفتن اطلاعات
+        clog('share data extracted');
+        this.onConnect();
         if(msg.result){
             this.sharedData = msg.sharedData;
         }else{
@@ -1745,11 +1749,6 @@ unfollowTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
                 this.state.currentUser.currentState = 'requested';
                 pipeline.next();
             } else {
-                updateFollowHistory(this.tabId, {
-                    id: msg.user.id,
-                    username: msg.user.username,
-                    status: 'requested'
-                });
                 pipeline.next(2);
             }
 
@@ -1759,7 +1758,7 @@ unfollowTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
             updateFollowHistory(this.tabId, {
                 id: msg.user.id,
                 username: msg.user.username,
-                status: 'unfollowed'
+                status: 'rejected'
             });
             pipeline.next(2);
         }

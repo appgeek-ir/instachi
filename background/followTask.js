@@ -194,7 +194,7 @@ followTask.prototype.openPostResponse = function (pipeline, msg) {
                         if (this.state.checkFollowHistory) {
                             addFlag++;
                             clog('check user follow history', item.user);
-                            hasFollowHistory(this.tab.userId, item.user.id, $.proxy(function (exists) {
+                            hasFollowHistory(this.tab.getViewer().id, item.user.id, $.proxy(function (exists) {
                                 addFlag--;
                                 if (!exists) {
                                     clog('add user to list:', item.user);
@@ -271,7 +271,7 @@ followTask.prototype.loadMoreCommentsResponse = function (pipeline, msg) {
                         if (this.state.checkFollowHistory) {
                             addFlag++;
                             clog('check user follow history', item.user);
-                            hasFollowHistory(this.tab.userId, item.user.id, $.proxy(function (exists) {
+                            hasFollowHistory(this.tab.getViewer().id, item.user.id, $.proxy(function (exists) {
                                 addFlag--;
                                 if (!exists) {
                                     clog('add user to list:', item.user);
@@ -512,7 +512,7 @@ followTask.prototype.fetchFollowersFromListCycle = function (pipeline, msg) {
                         if (this.state.checkFollowHistory) {
                             addFlag++;
                             clog('check user follow history', node);
-                            hasFollowHistory(this.tab.userId, node.id, $.proxy(function (exists) {
+                            hasFollowHistory(this.tab.getViewer().id, node.id, $.proxy(function (exists) {
                                 addFlag--;
                                 if (!exists) {
                                     clog('add user to list:', node);

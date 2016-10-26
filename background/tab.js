@@ -49,10 +49,14 @@ tab.prototype.setPort = function (port) {
     port.onDisconnect.addListener(function (msg) {
 
     });
-    this.onConnect();
 
+
+    clog('get shared data');
     //دریافت اطلاعات صفحه
     this.postMessage({ action:'getSharedData' },$.proxy(function(msg){
+        //صدا زدن پس از گرفتن اطلاعات
+        clog('share data extracted');
+        this.onConnect();
         if(msg.result){
             this.sharedData = msg.sharedData;
         }else{
