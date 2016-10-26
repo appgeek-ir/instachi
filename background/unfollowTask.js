@@ -107,7 +107,7 @@ unfollowTask.prototype.fetchFollowingsCycle = function (pipeline, msg) {
                 if (data.follows.page_info.has_next_page) {
                     clog('more records are comming!');
                     pipeline.register('loadMoreFollowings', {}, $.proxy(this.fetchFollowingsCycle, this));
-                    pipeline.next(1, 1);
+                    pipeline.next();
                 } else {
                     clog('no more records available!');
                     pipeline.end();
@@ -184,7 +184,7 @@ unfollowTask.prototype.fetchFollowHistories = function () {
 
             db.followHistories
                 .orderBy('datetime')
-                .and(x => $.inArray(x.status, equals) != -1)
+                .and(function(x) { return $.inArray(x.status, equals) != -1; })
                 .limit(this.state.count)
                 .toArray($.proxy(function (items) {
                     if (this.forceStop()) {
@@ -241,11 +241,6 @@ unfollowTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
                 this.state.currentUser.currentState = 'requested';
                 pipeline.next();
             } else {
-                updateFollowHistory(this.tabId, {
-                    id: msg.user.id,
-                    username: msg.user.username,
-                    status: 'requested'
-                });
                 pipeline.next(2);
             }
 
@@ -255,7 +250,7 @@ unfollowTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
             updateFollowHistory(this.tabId, {
                 id: msg.user.id,
                 username: msg.user.username,
-                status: 'unfollowed'
+                status: 'rejected'
             });
             pipeline.next(2);
         }

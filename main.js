@@ -51,7 +51,6 @@ function Execute(code, callback, args) {
     li.id = id;
     document.getElementById('_instaext').appendChild(li);
     observeDOM(li, function (args) {
-        //console.log('dom changed: ' + args);
         callback(li.innerText);
         li.remove();
     });
@@ -178,7 +177,7 @@ var controller = {
         if (a != null) {
             var query;
             Execute(function (id) {
-                console.log(window);
+
                 window.registerRequest(id, '/query/');
             }, function (result) {
                 query = JSON.parse(result);
@@ -323,7 +322,6 @@ var controller = {
         if (a != null) {
             var query;
             Execute(function (id) {
-                console.log(window);
                 window.registerRequest(id, '/query/');
             }, function (result) {
                 query = JSON.parse(result);

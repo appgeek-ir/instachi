@@ -10,6 +10,10 @@
   "license": "ISC",
   "devDependencies": {
     "gulp": "^3.9.1",
-    "gulp-concat": "^2.6.0"
+    "gulp-concat": "^2.6.0",
+    "gulp-inject-string": "^1.1.0",
+    "gulp-minify": "0.0.14",
+    "gulp-strip-line": "0.0.1",
+    "gulp-uglify": "^2.0.0"
   }
 }

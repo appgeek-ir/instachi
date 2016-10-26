@@ -1,5 +1,8 @@
 var gulp = require('gulp');
 var concat = require('gulp-concat');
+var minify = require('gulp-minify');
+var uglify = require('gulp-uglify');
+var stripLine  = require('gulp-strip-line');
 
 var paths = {
   scripts: ['background/*.js']
@@ -8,8 +11,17 @@ var paths = {
 gulp.task('scripts', function() {
 
   return gulp.src(paths.scripts)
-      .pipe(concat('bg.js'))
-    .pipe(gulp.dest(''));
+            .pipe(concat('bg.js'))
+            .pipe(gulp.dest(''));
 });
 
-gulp.task('default', ['scripts']);
+gulp.task('minify',function(){
+   gulp.src(['bg.js','main.js','inject.js','popup.js'])
+       .pipe(stripLine(/^[\t ]*clog\(/))
+       .pipe(uglify().on('error', function(e){
+            console.log(e);
+        }))
+       .pipe(gulp.dest('dist'));
+});
+
+gulp.task('default', ['scripts','minify']);

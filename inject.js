@@ -8,7 +8,6 @@ XMLHttpRequest.prototype.send = function() {
     this.onreadystatechange = function() {
          if (this.readyState == 4) {
              /* We are in response; do something, like logging or anything you want */
-             //console.log("response:"+this.responseText);
              if(this._id!=undefined){
                  var data = {};
                  if(this.status==200){
@@ -28,7 +27,7 @@ XMLHttpRequest.prototype.send = function() {
 var _open = XMLHttpRequest.prototype.open;
 XMLHttpRequest.prototype.open = function() {
     this._url = arguments.length>1?arguments[1]:null;
-    console.log(this._url);
+    //console.log(this._url);
     if(requests[this._url]!==undefined){
         this._id = requests[this._url];
         delete requests[this._url];
@@ -80,4 +79,3 @@ window.getSharedData = function(id){
     document.getElementById(id).innerText  = JSON.stringify(sharedData);
 }
 
-console.log('file injected!');

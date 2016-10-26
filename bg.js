@@ -1354,6 +1354,7 @@ var popupCtrl = {
         });
     }
 };
+
 /**
  * کلاس تب
  */
@@ -1610,7 +1611,7 @@ unfollowTask.prototype.fetchFollowingsCycle = function (pipeline, msg) {
                 if (data.follows.page_info.has_next_page) {
                     clog('more records are comming!');
                     pipeline.register('loadMoreFollowings', {}, $.proxy(this.fetchFollowingsCycle, this));
-                    pipeline.next(1, 1);
+                    pipeline.next();
                 } else {
                     clog('no more records available!');
                     pipeline.end();
@@ -1687,7 +1688,7 @@ unfollowTask.prototype.fetchFollowHistories = function () {
 
             db.followHistories
                 .orderBy('datetime')
-                .and(x => $.inArray(x.status, equals) != -1)
+                .and(function(x) { return $.inArray(x.status, equals) != -1; })
                 .limit(this.state.count)
                 .toArray($.proxy(function (items) {
                     if (this.forceStop()) {

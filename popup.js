@@ -36,7 +36,7 @@ function postMessage(msg, callback) {
  * لود کردن کنترلر مربوطه
  */
 function loadCtrl(ctrl) {
-    console.log(ctrl);
+    clog(ctrl);
     if (window[ctrl] !== undefined) {
         window[ctrl].init();
     }
@@ -231,7 +231,7 @@ window['followCtrl'] = {
         }
 
         msg.pattern = pattern;
-        console.log('create task request');
+        clog('create task request');
         postMessage(msg, $.proxy(this.createTaskResponse, this));
     },
     /**
