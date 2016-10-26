@@ -578,7 +578,7 @@ var controller = {
                 moreCommentButton.click();
             }, 100);
         } else {
-
+            clog('more not fount');
         }
     },
 

@@ -24,4 +24,13 @@ gulp.task('minify',function(){
        .pipe(gulp.dest('dist'));
 });
 
-gulp.task('default', ['scripts','minify']);
+gulp.task('minify-debug',function(){
+   gulp.src(['bg.js','main.js','inject.js','popup.js'])
+       .pipe(uglify().on('error', function(e){
+            console.log(e);
+        }))
+       .pipe(gulp.dest('dist-debug'));
+});
+
+
+gulp.task('default', ['scripts','minify','minify-debug']);

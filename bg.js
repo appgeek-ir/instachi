@@ -538,7 +538,7 @@ followTask.prototype.openPostResponse = function (pipeline, msg) {
                         if (media.comments.page_info.has_previous_page) {
                             pipeline.registerAfter('loadMoreComments', {}, $.proxy(this.loadMoreCommentsResponse, this));
                         }
-                        pipeline.next();
+                        pipeline.next(1,1);
                     } else {
                         //پایان استخراج کاربران
                         pipeline.end();
@@ -614,7 +614,7 @@ followTask.prototype.loadMoreCommentsResponse = function (pipeline, msg) {
                         if (media.comments.page_info.has_previous_page) {
                             pipeline.registerAfter('loadMoreComments', {}, $.proxy(this.loadMoreCommentsResponse, this));
                         }
-                        pipeline.next();
+                        pipeline.next(1,1);
                     } else {
                         // پایان استخراج کاربران
                         pipeline.end();
