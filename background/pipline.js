@@ -75,7 +75,7 @@ pipeline.prototype.next = function (steps, seconds) {
             var step = this.steps[this.index];
             if (step.type == 'page') {
                 clog('pipeling page call:', step);
-                postMessage(this.port, step.args, $.proxy(function (msg) {
+                postMessage(this.port, step.args, bind(function (msg) {
                     step.callback(this, msg);
                 }, this));
             } else {
@@ -87,7 +87,7 @@ pipeline.prototype.next = function (steps, seconds) {
             this.completed('Completed');
         }
     } else {
-        this.timeoutId = setTimeout($.proxy(function () {
+        this.timeoutId = setTimeout(bind(function () {
             delete this.timeoutId;
             this.next(steps);
         }, this), seconds * 1000);
@@ -109,7 +109,7 @@ pipeline.prototype.previous = function (steps, seconds) {
             var step = this.steps[this.index];
             if (step.type == 'page') {
                 clog('pipeling page call:', step);
-                postMessage(this.port, step.args, $.proxy(function (msg) {
+                postMessage(this.port, step.args, bind(function (msg) {
                     step.callback(this, msg);
                 }, this));
             } else {
@@ -121,7 +121,7 @@ pipeline.prototype.previous = function (steps, seconds) {
             this.completed('Completed');
         }
     } else {
-        this.timeoutId = setTimeout($.proxy(function () {
+        this.timeoutId = setTimeout(bind(function () {
             delete this.timeoutId;
             this.previous(steps);
         }, this), seconds * 1000);
@@ -151,7 +151,7 @@ pipeline.prototype.retry = function (seconds) {
         return;
     }
     seconds = seconds || 0.1;
-    this.timeoutId = setTimeout($.proxy(function () {
+    this.timeoutId = setTimeout(bind(function () {
         delete this.timeoutId;
         if(this.forceStop){
             return;
@@ -162,7 +162,7 @@ pipeline.prototype.retry = function (seconds) {
         }
         var step = this.steps[this.index];
         clog('pipeling next step:', step);
-        postMessage(this.port, step.args, $.proxy(function (msg) {
+        postMessage(this.port, step.args, bind(function (msg) {
             step.callback(this, msg);
         }, this));
     }, this), seconds * 1000);

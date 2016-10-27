@@ -26,11 +26,11 @@ var taskService = {
         chrome.tabs.query({
             active: true,
             currentWindow: true
-        }, $.proxy(function (items) {
+        }, bind(function (items) {
             //اولویت با تب جاری است
             if (items.length > 0 && tabs[items[0].id].task !== undefined) {
                 tabs[items[0].id].task = task;
-                task.completed = $.proxy(this.taskCompleted, this);
+                task.completed = bind(this.taskCompleted, this);
                 task.start(tabs[items[0].id]);
             } else {
                 //بررسی سایر تب ها
@@ -39,7 +39,7 @@ var taskService = {
                     if (tabs[i].task === undefined) {
                         tabs[i].task = task;
                         findFlag = true;
-                        task.completed = $.proxy(this.taskCompleted, this);
+                        task.completed = bind(this.taskCompleted, this);
                         task.start(tabs[i]);
                     }
                 }

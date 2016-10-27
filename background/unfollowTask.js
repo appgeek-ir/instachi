@@ -51,7 +51,7 @@ unfollowTask.prototype.fetchFromFollowings = function () {
     if (this.forceStop()) {
         return;
     }
-    this.tab.onConnect($.proxy(function () {
+    this.tab.onConnect(bind(function () {
         clog('connect after going to home');
         this.tab.removeOnConnect();
         if (this.forceStop()) {
@@ -59,13 +59,13 @@ unfollowTask.prototype.fetchFromFollowings = function () {
         }
 
         // ایجاد پایپ لاین
-        this.pipeline = this.tab.createPipeline($.proxy(function () {
+        this.pipeline = this.tab.createPipeline(bind(function () {
             clog('fetch completed!');
             this.completed(this);
         }, this));
 
         // باز کردن فالوینگ ها
-        this.pipeline.register('openFollowings', {}, $.proxy(this.fetchFollowingsCycle, this))
+        this.pipeline.register('openFollowings', {}, bind(this.fetchFollowingsCycle, this))
             .start();
 
     }, this));
@@ -106,7 +106,7 @@ unfollowTask.prototype.fetchFollowingsCycle = function (pipeline, msg) {
                 // بررسی صفحه بعدی
                 if (data.follows.page_info.has_next_page) {
                     clog('more records are comming!');
-                    pipeline.register('loadMoreFollowings', {}, $.proxy(this.fetchFollowingsCycle, this));
+                    pipeline.register('loadMoreFollowings', {}, bind(this.fetchFollowingsCycle, this));
                     pipeline.next();
                 } else {
                     clog('no more records available!');
@@ -138,19 +138,19 @@ unfollowTask.prototype.fetchFollowHistories = function () {
         return;
     }
     // ایجاد پایپ لاین
-    this.pipeline = this.tab.createPipeline($.proxy(function () {
+    this.pipeline = this.tab.createPipeline(bind(function () {
         clog('task completed', this.state);
         this.completed(this);
     }, this));
 
-    var createPipeline = $.proxy(function (followHistory) {
+    var createPipeline = bind(function (followHistory) {
         if (this.forceStop()) {
             return;
         }
         this.pipeline
-            .register($.proxy(function () {
+            .register(bind(function () {
                 this.state.currentUser = followHistory;
-                this.tab.onConnect($.proxy(function () {
+                this.tab.onConnect(bind(function () {
                     clog('connect after going to profile');
                     this.state.profileViewsCount++;
                     this.tab.removeOnConnect();
@@ -162,16 +162,16 @@ unfollowTask.prototype.fetchFollowHistories = function () {
             .register('gotoProfile', {
                 username: followHistory.username
             })
-            .register('getProfileInfo', {}, $.proxy(this.getProfileInfoResponse, this))
+            .register('getProfileInfo', {}, bind(this.getProfileInfoResponse, this))
             .register('unfollowFromPage', {
                 userId: followHistory.id,
                 username: followHistory.username
-            }, $.proxy(this.unfollowFromPageResponse, this));
+            }, bind(this.unfollowFromPageResponse, this));
     }, this);
 
     this.tab.postMessage({
         action: 'getCurrentUser'
-    }, $.proxy(function (msg) {
+    }, bind(function (msg) {
         if (this.forceStop()) {
             return;
         }
@@ -184,9 +184,10 @@ unfollowTask.prototype.fetchFollowHistories = function () {
 
             db.followHistories
                 .orderBy('datetime')
-                .and(function(x) { return $.inArray(x.status, equals) != -1; })
+                .and(function(x) { return inArray(x.status, equals) != -1; })
                 .limit(this.state.count)
-                .toArray($.proxy(function (items) {
+                .toArray(bind(function (items) {
+                    db.close();
                     if (this.forceStop()) {
                         return;
                     }
@@ -292,7 +293,7 @@ unfollowTask.prototype.unfollowFromPageResponse = function (pipeline, msg) {
             var waitUntil = new Date();
             waitUntil.setSeconds(waitUntil.getSeconds() + rnd * 60);
             this.state.waitUntil = waitUntil;
-            setTimeout($.proxy(this.endWaiting, this), rnd * 60 * 1000);
+            setTimeout(bind(this.endWaiting, this), rnd * 60 * 1000);
 
             pipeline.previous(3, rnd * 60);
         }

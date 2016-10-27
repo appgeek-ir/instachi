@@ -60,7 +60,7 @@ function invokeCallback(id, msg) {
  * userId: برای استفاده همزمان برای چندین حساب کاربری
  */
 function getDb(userId) {
-    if(userId==undefined){
+    if (userId == undefined) {
         return null;
     }
     var db = new Dexie('user_' + userId);
@@ -128,48 +128,51 @@ function hasFollowHistory(tabUserId, userId, fn) {
  */
 function updateFollowHistory(tabId, history) {
     if (tabs[tabId] !== undefined) {
-        tabs[tabId].postMessage({
-            action: 'getCurrentUser'
-        }, function (msg) {
-            clog('update follow history: ', msg);
-            if (msg.result) {
-                var db = getDb(msg.user.id);
-                clog('history:', history);
-                db.followHistories.get(history.id, function (item) {
-                    clog('item:', item);
-                    if (item == undefined) {
-                        // در صورت وارد نشده بودن زمان آن را برابرحال قرار می دهیم
-                        if (history.datetime == undefined) {
-                            history.datetime = new Date().getTime();
-                        }
-                        db.followHistories.add(history).then(function () {
-                            clog('history inserted');
-                        }).catch(function (err) {
-                            clog('update follow history: db error: ' + err);
-                        });
+        var viewer = tabs[tabId].getViewer();
+        if (viewer != null) {
+            clog('history:', history);
+            var db = getDb(viewer.id);
+            db.followHistories.get(history.id, function (item) {
+                clog('item:', item);
+                if (item == undefined) {
+                    // در صورت وارد نشده بودن زمان آن را برابرحال قرار می دهیم
+                    if (history.datetime == undefined) {
+                        history.datetime = new Date().getTime();
+                    }
+                    db.followHistories.add(history).then(function () {
+                        db.close();
+                        clog('history inserted');
+                    }).catch(function (err) {
+                        db.close();
+                        clog('update follow history: db error: add: ' + err);
+                    });
+                } else {
+                    // در صورت تغییر وضعیت زمان هم تغییر می کند
+                    if (item.status != history.status) {
+                        history.datetime = new Date().getTime();
                     } else {
-                        // در صورت تغییر وضعیت زمان هم تغییر می کند
-                        if (item.status != history.status) {
+                        if (item.datetime == undefined) {
                             history.datetime = new Date().getTime();
                         } else {
-                            if (item.datetime == undefined) {
-                                history.datetime = new Date().getTime();
-                            } else {
-                                history.datetime = item.datetime;
-                            }
+                            history.datetime = item.datetime;
                         }
-
-                        db.followHistories.put(history).then(function () {
-                            clog('history updated!');
-                        }).catch(function (err) {
-                            clog('update follow history: db error: ' + err);
-                        });
                     }
-                });
-            } else {
-                // خطا
-            }
-        });
+
+                    db.followHistories.put(history).then(function () {
+                        db.close();
+                        clog('history updated!');
+                    }).catch(function (err) {
+                        db.close();
+                        clog('update follow history: db error: put: ' + err);
+                    });
+                }
+            }).catch(function (err) {
+                db.close();
+                clog('update follow history: db error: get: ' + err);
+            });
+        } else {
+            clog('viewer does not exists');
+        }
     } else {
         clog('update follow history: tab not found');
     }
@@ -204,6 +207,13 @@ function all(arr, testFn) {
     return true;
 }
 
+function inArray(item, arr) {
+    return arr.indexOf(item);
+}
+
+function bind(fn, context) {
+    return fn.bind(context);
+};
 
 // گوش دادن به درخواست اتصال
 chrome.runtime.onConnect.addListener(function (port) {
@@ -222,95 +232,4 @@ chrome.runtime.onConnect.addListener(function (port) {
             tabs[port.sender.tab.id].setPort(port);
         }
     }
-});
-
-function showFollowHistories(userId) {
-    var db = getDb(userId);
-    var $histories = $('#histories');
-    $histories.children('*').remove();
-    var query = db.followHistories
-        .orderBy('datetime');
-        //.and(x => $.inArray(x.status,['following','requested'])!=-1)
-        //.reverse()
-        //.limit(10)
-    query.count(function (count) {
-        $histories.append('<div>'+count+'</div>');
-    })
-
-    query.toArray(function (items) {
-            for (var i in items) {
-                var item = items[i];
-                $histories.append('<div>' + item.id + '  ' + item.username + '  ' + new Date(item.datetime) + '  ' + item.status + ';</div>');
-            }
-        });
-}
-
-function update(userId) {
-
-    var db = getDb(userId);
-    db.followHistories
-        .toArray(function (histories) {
-            var count = histories.length;
-
-            for (var i in histories) {
-                clog(count--);
-                var history = histories[i];
-                var datetime = Date.parse(history.datetime);
-                if (!isNaN(datetime)) {
-                    history.datetime = datetime;
-                    db.followHistories.put(history).then(function () {
-                        clog('history updated!');
-                    }).catch(function (err) {
-                        clog('update follow history: db error: ' + err);
-                    });
-                }
-            }
-        });
-
-}
-
-Zepto(function () {
-
-    var $container = $('#container');
-    var $histories = $('#histories');
-    $('#btn-import').on('click', function () {
-        var db = getDb($('#user-id').val());
-        var data = $('#data').val().split(';');
-        for (var i in data) {
-            var row = data[i].split(',');
-            db.followHistories.add({
-                id: row[0].toString(),
-                username: row[1],
-                datetime:parseInt(row[2]),
-                status: row[3]
-            }).then(function () {
-                clog('history inserted');
-            }).catch(function (err) {
-                clog('update follow history: db error: ' + err);
-            });
-        }
-    });
-
-    Dexie.getDatabaseNames(function callback(names) {
-        var $ul = $('#dbs');
-        for (var i in names) {
-            var $li = $('<li></li>');
-            var $a = $('<a href="#">' + names[i] + '</a>');
-            var $upd = $('<a href="#"> update </a>');
-            $upd.on('click', function (e) {
-                e.preventDefault();
-                var $this = $(this)
-                update($this.data('id').split('_')[1]);
-            }).data('id', names[i]);
-
-            $a.on('click', function (e) {
-                e.preventDefault();
-                var $this = $(this)
-                showFollowHistories($this.data('id').split('_')[1]);
-            }).data('id', names[i]);
-            $a.appendTo($li);
-            $upd.appendTo($li);
-            $li.appendTo($ul);
-        }
-    });
 });

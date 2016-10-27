@@ -53,7 +53,7 @@ tab.prototype.setPort = function (port) {
 
     clog('get shared data');
     //دریافت اطلاعات صفحه
-    this.postMessage({ action:'getSharedData' },$.proxy(function(msg){
+    this.postMessage({ action:'getSharedData' },bind(function(msg){
         //صدا زدن پس از گرفتن اطلاعات
         clog('share data extracted');
         this.onConnect();
