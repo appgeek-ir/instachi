@@ -264,8 +264,8 @@ var controller = {
         }
     },
     /**
-    * بازگرداندن نام کاربری صفحه ای که درون آن هستیم
-    */
+     * بازگرداندن نام کاربری صفحه ای که درون آن هستیم
+     */
     getCurrentPage: function (msg) {
         clog('get current page request:', msg)
         var profileLink = document.querySelector('span>section>main>article>header>div:nth-child(2)>div>h1');
@@ -299,8 +299,8 @@ var controller = {
         });
     },
 
-    getSharedData: function(msg){
-        clog('get shared data:',msg);
+    getSharedData: function (msg) {
+        clog('get shared data:', msg);
         Execute(function (id) {
             window.getSharedData(id);
         }, function (result) {
@@ -432,7 +432,7 @@ var controller = {
     },
     unfollowFromPage: function (msg) {
         var button = document.querySelector('span>section>main>article>header>div:nth-child(2)>div>span:nth-child(2)>span:nth-child(1)>button');
-        if(button==null){
+        if (button == null) {
             button = document.querySelector('span>section>main>article>header>div:nth-child(2)>div>span:nth-child(2)>button');
         }
         if (button != null) {
@@ -558,33 +558,41 @@ var controller = {
      */
     loadMoreComments: function (msg) {
         clog('load more comments:', msg);
-        var moreCommentButton = document.querySelector('div[role="dialog"]>div:nth-child(2)>div:nth-child(1)>article>div:nth-child(3)>ul>li:nth-child(2)>button');
+        var moreCommentButton = document.querySelector('div[role="dialog"]>div:nth-child(2)>div:nth-child(1)>article>div:nth-child(3)>ul>li:nth-child(1)>button');
+        if (moreCommentButton == null) {
+            clog('propably comment is missing,check 2nd child');
+            moreCommentButton = document.querySelector('div[role="dialog"]>div:nth-child(2)>div:nth-child(1)>article>div:nth-child(3)>ul>li:nth-child(2)>button');
+        }
         if (moreCommentButton != null) {
-            Execute(function (id) {
-                window.registerRequest(id, '/query/');
-            }, function (result) {
-                clog('load more comments response:', result);
-                var response = JSON.parse(result);
-                postCallback(msg.callbackId, {
-                    result: true,
-                    response: response
+            if (moreCommentButton.textContent.indexOf('comments') != -1) {
+                Execute(function (id) {
+                    window.registerRequest(id, '/query/');
+                }, function (result) {
+                    clog('load more comments response:', result);
+                    var response = JSON.parse(result);
+                    postCallback(msg.callbackId, {
+                        result: true,
+                        response: response
+                    });
                 });
-            });
 
-            if (moreCommentButton.textContent.indexOf('view all') == 0) {
-                moreCommentButton.click();
+                if (moreCommentButton.textContent.indexOf('view all') == 0) {
+                    moreCommentButton.click();
+                }
+                setTimeout(function () {
+                    moreCommentButton.click();
+                }, 100);
+            } else {
+                clog('button found but comments button not found');
             }
-            setTimeout(function () {
-                moreCommentButton.click();
-            }, 100);
         } else {
-            clog('more not fount');
+            clog('more button not found');
         }
     },
 
     followFromPage: function (msg) {
         var button = document.querySelector('span>section>main>article>header>div:nth-child(2)>div>span:nth-child(2)>span:nth-child(1)>button');
-        if(button==null){
+        if (button == null) {
             button = document.querySelector('span>section>main>article>header>div:nth-child(2)>div>span:nth-child(2)>button');
         }
         if (button != null) {

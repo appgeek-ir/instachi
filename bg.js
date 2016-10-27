@@ -233,6 +233,7 @@ chrome.runtime.onConnect.addListener(function (port) {
         }
     }
 });
+
 /**
  * سازنده وظیفه فالو
  */
