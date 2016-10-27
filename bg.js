@@ -109,6 +109,7 @@ function persistTask(tabId, task) {
 function hasFollowHistory(tabUserId, userId, fn) {
     var db = getDb(tabUserId);
     db.followHistories.get(userId, function (item) {
+        db.close();
         clog('has follow history get:', item);
         if (item == undefined) {
             fn(false);
@@ -116,6 +117,7 @@ function hasFollowHistory(tabUserId, userId, fn) {
             fn(true);
         }
     }).catch(function (err) {
+        db.close();
         clog('has follow history db error:' + err);
     });
 }
