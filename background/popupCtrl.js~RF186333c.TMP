@@ -259,7 +259,6 @@ var popupCtrl = {
                     exportDatabase(db).then(function (dbObj) {
                         db.close();
                         dbObj.id = viewer.id;
-                        dbObj.username = viewer.username;
                         dbObj.datetime = new Date().toISOString();
                         var json = JSON.stringify(dbObj);
                         var fileName = 'instachi-' + viewer.id + '-' + new Date().toISOString();

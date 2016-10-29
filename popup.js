@@ -350,6 +350,95 @@ window['aboutCtrl'] = {
 
 }
 
+window['backupCtrl'] = {
+    init: function () {
+        showTemplate('file');
+        var $main = $('section#main'),
+            that = this;
+        $main.find('a.button-return').on('click', function (e) {
+            e.preventDefault();
+            loadCtrl('mainCtrl');
+        });
+        $main.find('#btn-backup').on('click', function (e) {
+            e.preventDefault();
+            postMessage({ action: 'backup' }, $.proxy(that.backupToFile, that));
+        });
+
+        $main.find('#btn-restore').on('click', $.proxy(this.btnRestoreClick, this));
+        $main.find('#file-input').on('change', $.proxy(this.readSingleFile, this));
+        $main.find('#btn-confirm-restore').on('click', $.proxy(this.doRestore, this));
+        postMessage({ action: 'getViewer' }, $.proxy(this.getViewerResponse, this));
+    },
+    getViewerResponse: function(msg){
+        this.viewer = msg.viewer;
+    },
+
+    btnRestoreClick: function(e){
+        e.preventDefault();
+        $('#file-input').click();
+    },
+
+    backupToFile: function(msg)
+    {
+        clog('backup respnse:', msg);
+        $('#backup-message').show();
+    },
+    readSingleFile: function (e) {
+        
+        var file = e.target.files[0];
+        if (!file) {
+            clog('file not selected');
+            return;
+        }
+        clog('file selected');
+        var reader = new FileReader();
+        reader.onload = $.proxy(this.onloadFileEvent, this);
+        reader.onerror = function (e) {
+            clog('can not read file', e);
+        };
+        reader.readAsText(file);
+    },
+
+    onloadFileEvent: function (e) {
+        var contents = e.target.result;
+        if (contents !== undefined && contents != null) {
+            this.data = JSON.parse(contents);
+            if (this.viewer != undefined && this.data.id == this.viewer.id) {
+                $('#restore-warning').show();
+                $('#restore-warning').find('span').text(this.data.username);
+            } else {
+                error('نسخه پشتیبان مربوط به این حساب کاربری نمی باشد!');
+            }
+        } else {
+            clog('file does not have any contents');
+        }
+    },
+
+    createTask: function (data) {
+        var msg = {
+            action: 'createTask',
+            type: 'Restore',
+            data: data,
+            startType: 'auto'
+        };
+        postMessage(msg, $.proxy(this.createTaskResponse, this));
+    },
+    createTaskResponse: function (msg) {
+        clog('create task response', msg);
+        if (msg.result) {
+            loadCtrl('mainCtrl');
+        } else {
+            error(msg.message);
+        }
+    },
+    doRestore: function () {
+        clog('do restore');
+        this.createTask(this.data);
+        delete this.data;
+    }
+
+}
+
 //initialize
 Zepto(function ($) {
 

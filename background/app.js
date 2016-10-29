@@ -215,6 +215,34 @@ function bind(fn, context) {
     return fn.bind(context);
 };
 
+function exportDatabase(db) {
+    return db.transaction('r', db.tables, function() {
+        // Map to transaction-bound table instances because instances in db.tables are not bound
+        // to current transaction by default (may change in future versions of Dexie)
+        var tables = db.tables.map(function (t) {
+            return Dexie.currentTransaction.tables[t.name];
+        });
+        // Prepare a result: An array of {tableName: "name", contents: [objects...]}
+        var result = { version: db.verno, tables: [] };
+        // Recursively export each table:
+        return exportNextTable ();
+
+        function exportNextTable () {
+            var table = tables.shift();
+            return table.toArray().then(function(a) {
+                result.tables.push({
+                    tableName: table.name,
+                    contents: a
+                });
+                return tables.length > 0 ?
+                    exportNextTable() :
+                    result;
+            });
+        }
+    });
+};
+
+
 // گوش دادن به درخواست اتصال
 chrome.runtime.onConnect.addListener(function (port) {
     if (port.name == "popup") {

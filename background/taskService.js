@@ -4,12 +4,15 @@ var taskService = {
     create: function (args) {
         var task;
         switch (args.type) {
-        case 'Follow':
-            task = new followTask(args);
-            break;
-        case 'Unfollow':
-            task = new unfollowTask(args);
-            break;
+            case 'Follow':
+                task = new followTask(args);
+                break;
+            case 'Unfollow':
+                task = new unfollowTask(args);
+                break;
+            case 'Restore':
+                task = new restoreTask(args);
+                break;
         }
         if (task === undefined) {
             return false;
