@@ -1,3 +1,5 @@
+/// <reference path="app.js" />
+
 /**
  * سازنده وظیفه فالو
  */
@@ -380,7 +382,7 @@ followTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
         } else {
 
             clog('followed: skip from follow');
-            var status = msg.user.followed_by_viewer ? 'following' : 'requested';
+            var status = msg.user.followed_by_viewer ? followStatus.following : followStatus.requested;
             // پرش از فالو
             // قبلن بررسی کردیم که کاربر درون لیست نباشد
             // پس کاربر نیست و باید این را ذخیره کنیم
@@ -397,7 +399,7 @@ followTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
         updateFollowHistory(this.tabId, {
             id: this.state.currentUser.id,
             username: this.state.currentUser.username,
-            status: 'block'
+            status: followStatus.block
         });
         pipeline.next(2);
     }
@@ -411,16 +413,19 @@ followTask.prototype.followFromProfileResponse = function (pipeline, msg) {
     if (msg.result) {
         if (msg.response.status == 200) {
             if (msg.response.data.status == 'ok') {
+                var status = 0;
                 if (msg.response.data.result == 'following') {
+                    status = followStatus.following;
                     this.state.followsCount++;
                 } else {
+                    status = followStatus.requested;
                     this.state.requestsCount++;
                 }
                 var currentUser = pipeline.getCurrentStep().args;
                 updateFollowHistory(this.tabId, {
                     id: currentUser.userId,
                     username: currentUser.username,
-                    status: msg.response.data.result,
+                    status: status,
                     datetime: new Date().getTime()
                 });
                 pipeline.next(1, 1);

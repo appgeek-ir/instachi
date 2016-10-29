@@ -1,7 +1,17 @@
+/// <reference path="dexie.min.js" />
+
 var tabs = {},
     ports = {},
     popupPort,
-    callbacks = {};
+    callbacks = {},
+    followStatus = {
+        none: 0,
+        following: 1,
+        requested: 2,
+        block: 3,
+        rejected: 4,
+        unfollowed: 5
+    };
 
 // بررسی تابع بودن شی
 function isFunction(obj) {
@@ -68,6 +78,35 @@ function getDb(userId) {
         tasks: 'id,state,status',
         followHistories: 'id,username,status,datetime'
     });
+
+    /**
+    * نسخه دو تغییر وضعیت از رشته به عدد برای بالا بردن سرعت
+    */
+    db.version(2).upgrade(function (trans) {
+        trans.followHistories.toCollection().modify(function (followHistory) {
+            switch (followHistory.status) {
+                case 'following':
+                    followHistory.status = followStatus.following;
+                    break;
+                case 'requested':
+                    followHistory.status = followStatus.requested;
+                    break;
+                case 'block':
+                    followHistory.status = followStatus.block;
+                    break;
+                case 'rejected':
+                    followHistory.status = followStatus.rejected;
+                    break;
+                case 'unfollowed':
+                    followHistory.status = followStatus.unfollowed;
+                    break;
+                default:
+                    clog(followHistory.status);
+            }
+            
+        });
+    });
+
     db.open().catch(function (e) {
         clog('db.open error:' + e);
     });

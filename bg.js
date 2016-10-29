@@ -1,7 +1,17 @@
+/// <reference path="dexie.min.js" />
+
 var tabs = {},
     ports = {},
     popupPort,
-    callbacks = {};
+    callbacks = {},
+    followStatus = {
+        none: 0,
+        following: 1,
+        requested: 2,
+        block: 3,
+        rejected: 4,
+        unfollowed: 5
+    };
 
 // بررسی تابع بودن شی
 function isFunction(obj) {
@@ -68,6 +78,35 @@ function getDb(userId) {
         tasks: 'id,state,status',
         followHistories: 'id,username,status,datetime'
     });
+
+    /**
+    * نسخه دو تغییر وضعیت از رشته به عدد برای بالا بردن سرعت
+    */
+    db.version(2).upgrade(function (trans) {
+        trans.followHistories.toCollection().modify(function (followHistory) {
+            switch (followHistory.status) {
+                case 'following':
+                    followHistory.status = followStatus.following;
+                    break;
+                case 'requested':
+                    followHistory.status = followStatus.requested;
+                    break;
+                case 'block':
+                    followHistory.status = followStatus.block;
+                    break;
+                case 'rejected':
+                    followHistory.status = followStatus.rejected;
+                    break;
+                case 'unfollowed':
+                    followHistory.status = followStatus.unfollowed;
+                    break;
+                default:
+                    clog(followHistory.status);
+            }
+            
+        });
+    });
+
     db.open().catch(function (e) {
         clog('db.open error:' + e);
     });
@@ -261,6 +300,8 @@ chrome.runtime.onConnect.addListener(function (port) {
         }
     }
 });
+
+/// <reference path="app.js" />
 
 /**
  * سازنده وظیفه فالو
@@ -644,7 +685,7 @@ followTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
         } else {
 
             clog('followed: skip from follow');
-            var status = msg.user.followed_by_viewer ? 'following' : 'requested';
+            var status = msg.user.followed_by_viewer ? followStatus.following : followStatus.requested;
             // پرش از فالو
             // قبلن بررسی کردیم که کاربر درون لیست نباشد
             // پس کاربر نیست و باید این را ذخیره کنیم
@@ -661,7 +702,7 @@ followTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
         updateFollowHistory(this.tabId, {
             id: this.state.currentUser.id,
             username: this.state.currentUser.username,
-            status: 'block'
+            status: followStatus.block
         });
         pipeline.next(2);
     }
@@ -675,16 +716,19 @@ followTask.prototype.followFromProfileResponse = function (pipeline, msg) {
     if (msg.result) {
         if (msg.response.status == 200) {
             if (msg.response.data.status == 'ok') {
+                var status = 0;
                 if (msg.response.data.result == 'following') {
+                    status = followStatus.following;
                     this.state.followsCount++;
                 } else {
+                    status = followStatus.requested;
                     this.state.requestsCount++;
                 }
                 var currentUser = pipeline.getCurrentStep().args;
                 updateFollowHistory(this.tabId, {
                     id: currentUser.userId,
                     username: currentUser.username,
-                    status: msg.response.data.result,
+                    status: status,
                     datetime: new Date().getTime()
                 });
                 pipeline.next(1, 1);
@@ -1079,6 +1123,8 @@ pipeline.prototype.stop = function(){
     }
 }
 
+/// <reference path="app.js" />
+
 /**
  * کنترلر پپ آپ
  */
@@ -1235,7 +1281,7 @@ var popupCtrl = {
                     clog('get viewer response: ', viewer);
                     if (viewer != null) {
                         var db = getDb(viewer.id);
-                        db.followHistories.where('status').equals('following').count(function (count) {
+                        db.followHistories.where('status').equals(followStatus.following).count(function (count) {
                             port.postMessage({
                                 action: 'callback.getFollowingsCount',
                                 result: true,
@@ -1286,7 +1332,7 @@ var popupCtrl = {
                     clog('get viewer response: ', viewer);
                     if (viewer != null) {
                         var db = getDb(viewer.id);
-                        db.followHistories.where('status').equals('requested').count(function (count) {
+                        db.followHistories.where('status').equals(followStatus.requested).count(function (count) {
                             port.postMessage({
                                 action: 'callback.getRequestsCount',
                                 result: true,
@@ -1359,7 +1405,7 @@ var popupCtrl = {
     }
 };
 
-
+/// <reference path="app.js" />
 
 var restoreTask = function (args) {
     this.id = idGenerator();
@@ -1644,6 +1690,8 @@ var taskService = {
     }
 }
 
+/// <reference path="app.js" />
+
 /**
  * وظیفه آنفالو کردن کاربران
  */
@@ -1745,7 +1793,7 @@ unfollowTask.prototype.fetchFollowingsCycle = function (pipeline, msg) {
                     updateFollowHistory(this.tabId, {
                         id: node.id,
                         username: node.username,
-                        status: 'following'
+                        status: followStatus.following
                     });
                 }
 
@@ -1823,9 +1871,9 @@ unfollowTask.prototype.fetchFollowHistories = function () {
         }
         if (msg.result) {
             var db = getDb(msg.user.id);
-            var equals = ['following'];
+            var equals = [followStatus.following];
             if (this.state.checkRequests) {
-                equals.push('requested');
+                equals.push(followStatus.requested);
             }
 
             db.followHistories
@@ -1867,11 +1915,11 @@ unfollowTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
                     pipeline.next();
                 } else {
                     clog('user currently follow me!');
-                    if (this.state.currentUser.status == 'requested') {
+                    if (this.state.currentUser.status == followStatus.requested) {
                         updateFollowHistory(this.tabId, {
                             id: msg.user.id,
                             username: msg.user.username,
-                            status: 'following'
+                            status: followStatus.following
                         });
                     }
                     pipeline.next(2);
@@ -1897,7 +1945,7 @@ unfollowTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
             updateFollowHistory(this.tabId, {
                 id: msg.user.id,
                 username: msg.user.username,
-                status: 'rejected'
+                status: followStatus.rejected
             });
             pipeline.next(2);
         }
@@ -1907,7 +1955,7 @@ unfollowTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
         updateFollowHistory(this.tabId, {
             id: this.state.currentUser.id,
             username: this.state.currentUser.username,
-            status: 'block'
+            status: followStatus.block
         });
         pipeline.next(2);
     }
@@ -1929,7 +1977,7 @@ unfollowTask.prototype.unfollowFromPageResponse = function (pipeline, msg) {
             updateFollowHistory(this.tabId, {
                 id: msg.user.userId,
                 username: msg.user.username,
-                status: 'unfollowed'
+                status: followStatus.unfollowed
             });
             pipeline.next(1, 1);
         } else {

@@ -1,3 +1,5 @@
+/// <reference path="app.js" />
+
 /**
  * وظیفه آنفالو کردن کاربران
  */
@@ -99,7 +101,7 @@ unfollowTask.prototype.fetchFollowingsCycle = function (pipeline, msg) {
                     updateFollowHistory(this.tabId, {
                         id: node.id,
                         username: node.username,
-                        status: 'following'
+                        status: followStatus.following
                     });
                 }
 
@@ -177,9 +179,9 @@ unfollowTask.prototype.fetchFollowHistories = function () {
         }
         if (msg.result) {
             var db = getDb(msg.user.id);
-            var equals = ['following'];
+            var equals = [followStatus.following];
             if (this.state.checkRequests) {
-                equals.push('requested');
+                equals.push(followStatus.requested);
             }
 
             db.followHistories
@@ -221,11 +223,11 @@ unfollowTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
                     pipeline.next();
                 } else {
                     clog('user currently follow me!');
-                    if (this.state.currentUser.status == 'requested') {
+                    if (this.state.currentUser.status == followStatus.requested) {
                         updateFollowHistory(this.tabId, {
                             id: msg.user.id,
                             username: msg.user.username,
-                            status: 'following'
+                            status: followStatus.following
                         });
                     }
                     pipeline.next(2);
@@ -251,7 +253,7 @@ unfollowTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
             updateFollowHistory(this.tabId, {
                 id: msg.user.id,
                 username: msg.user.username,
-                status: 'rejected'
+                status: followStatus.rejected
             });
             pipeline.next(2);
         }
@@ -261,7 +263,7 @@ unfollowTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
         updateFollowHistory(this.tabId, {
             id: this.state.currentUser.id,
             username: this.state.currentUser.username,
-            status: 'block'
+            status: followStatus.block
         });
         pipeline.next(2);
     }
@@ -283,7 +285,7 @@ unfollowTask.prototype.unfollowFromPageResponse = function (pipeline, msg) {
             updateFollowHistory(this.tabId, {
                 id: msg.user.userId,
                 username: msg.user.username,
-                status: 'unfollowed'
+                status: followStatus.unfollowed
             });
             pipeline.next(1, 1);
         } else {

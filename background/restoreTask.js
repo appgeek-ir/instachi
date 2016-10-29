@@ -1,4 +1,4 @@
-﻿
+﻿/// <reference path="app.js" />
 
 var restoreTask = function (args) {
     this.id = idGenerator();

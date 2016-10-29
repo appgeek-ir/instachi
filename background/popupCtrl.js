@@ -1,3 +1,5 @@
+/// <reference path="app.js" />
+
 /**
  * کنترلر پپ آپ
  */
@@ -154,7 +156,7 @@ var popupCtrl = {
                     clog('get viewer response: ', viewer);
                     if (viewer != null) {
                         var db = getDb(viewer.id);
-                        db.followHistories.where('status').equals('following').count(function (count) {
+                        db.followHistories.where('status').equals(followStatus.following).count(function (count) {
                             port.postMessage({
                                 action: 'callback.getFollowingsCount',
                                 result: true,
@@ -205,7 +207,7 @@ var popupCtrl = {
                     clog('get viewer response: ', viewer);
                     if (viewer != null) {
                         var db = getDb(viewer.id);
-                        db.followHistories.where('status').equals('requested').count(function (count) {
+                        db.followHistories.where('status').equals(followStatus.requested).count(function (count) {
                             port.postMessage({
                                 action: 'callback.getRequestsCount',
                                 result: true,
