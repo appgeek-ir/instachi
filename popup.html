@@ -78,13 +78,20 @@
     </div>
 </script>
 <script type="text/template" id="main-template">
-
+    <div class="alert alert-success" id="main-success" style="display:none;"></div>
+    <div class="alert alert-danger" id="main-error" style="display:none;"></div>
     <ul class="pure-menu-list">
         <li class="pure-menu-item">
             <a href="#" class="pure-menu-link" target="followCtrl"><img src="images/follow.png" /> فالو کردن کاربران</a>
         </li>
         <li class="pure-menu-item">
             <a href="#" class="pure-menu-link" target="unfollowCtrl"><img src="images/unfollow.png" />آنفالو کردن کاربران</a>
+        </li>
+        <li class="pure-menu-item">
+            <a href="#" class="pure-menu-link" id="get-profile-pic"><img src="images/picture.png" />دانلود تصویر پروفایل</a>
+        </li>
+        <li class="pure-menu-item">
+            <a href="#" class="pure-menu-link" id="get-media"><img src="images/media.png" />دانلود تصویر و ویدیوی پست</a>
         </li>
         <li class="pure-menu-item">
             <a href="#" class="pure-menu-link" target="backupCtrl"><img src="images/diskette.png" /> پشتیبان گیری</a>

@@ -277,5 +277,77 @@ var popupCtrl = {
                 }
             }
         });
+    },
+
+    getProfilePicture: function (port, msg) {
+        clog('popupCtrl: get profie picture:', msg);
+        chrome.tabs.query({
+            active: true,
+            currentWindow: true
+        }, function (items) {
+            if (items.length > 0) {
+                if (tabs[items[0].id] !== undefined) {
+                    tabs[items[0].id].postMessage({
+                        action: 'getProfilePictureUrl'
+                    }, bind(function (msg) {
+                        if (msg.result) {
+                            chrome.downloads.download({
+                                url: msg.url.replace('s150x150', 's1080x1080')
+                            });
+                            port.postMessage({
+                                action: 'callback.getProfilePicture',
+                                result: true
+                            });
+                        } else {
+                            port.postMessage({
+                                action: 'callback.getProfilePicture',
+                                result: false
+                            });
+                        }
+                    }, this));
+                } else {
+                    clog('tab is undefined');
+                }
+            } else {
+                clog('active tab not found');
+            }
+        });
+    },
+
+    getMedia: function (port, msg) {
+        clog('popupCtrl: get media:', msg);
+        chrome.tabs.query({
+            active: true,
+            currentWindow: true
+        }, function (items) {
+            if (items.length > 0) {
+                if (tabs[items[0].id] !== undefined) {
+                    tabs[items[0].id].postMessage({
+                        action: 'getMediaUrl'
+                    }, bind(function (msg) {
+                        if (msg.result) {
+                            for(var i in msg.urls){
+                                chrome.downloads.download({
+                                    url: msg.urls[i]
+                                });
+                            }
+                            port.postMessage({
+                                action: 'callback.getMedia',
+                                result: true
+                            });
+                        } else {
+                            port.postMessage({
+                                action: 'callback.getMedia',
+                                result: false
+                            });
+                        }
+                    }, this));
+                } else {
+                    clog('tab is undefined');
+                }
+            } else {
+                clog('active tab not found');
+            }
+        });
     }
 };

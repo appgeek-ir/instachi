@@ -152,6 +152,21 @@ var mainCtrl = {
                 var newURL = "http://www.reyhansoft.com/instachi/donate";
                 chrome.tabs.create({ url: newURL });
             });
+            var that = this;
+            $('section#main').find('#get-profile-pic').on('click', function (e) {
+                e.preventDefault();
+                clog('call get profile picture');
+                postMessage({
+                    action: 'getProfilePicture'
+                }, $.proxy(that.getProfilePictureResponse, that));
+            });
+            $('section#main').find('#get-media').on('click', function (e) {
+                e.preventDefault();
+                clog('call get media');
+                postMessage({
+                    action: 'getMedia'
+                }, $.proxy(that.getProfilePictureResponse, that));
+            });
         }
     },
 
@@ -169,6 +184,22 @@ var mainCtrl = {
         } else {
             error(msg.message);
         }
+    },
+    getProfilePictureResponse: function (msg) {
+        if (msg.result) {
+            $('#main-success').text('درخواست دانلود با موفقیت صادر شد');
+            $('#main-success').show();
+            setTimeout(function () {
+                $('#main-success').hide();
+            }, 5000);
+        } else {
+            $('#main-error').text('امکان دانلود وجود ندارد!');
+            $('#main-error').show();
+            setTimeout(function () {
+                $('#main-error').hide();
+            }, 5000);
+        }
+        clog('get completed', msg);
     }
 }
 window['mainCtrl'] = mainCtrl;

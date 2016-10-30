@@ -621,6 +621,41 @@ var controller = {
             });
         }
     },
+
+    getProfilePictureUrl: function (msg) {
+        var picture = document.querySelector('span>section>main>article>header>div:nth-child(1)>img');
+        if (picture != null) {
+            postCallback(msg.callbackId, {
+                result: true,
+                url: picture.getAttribute('src')
+            });
+        } else {
+            clog('picture not found');
+            postCallback(msg.callbackId, {
+                result: false
+            });
+        }
+    },
+    getMediaUrl: function (msg) {
+        var img = document.querySelector('div[role="dialog"]>div:nth-child(2)>div:nth-child(1)>article>div:nth-child(2) img');
+        if (img != null) {
+            var urls = new Array();
+            urls.push(img.getAttribute('src'));
+            if (img.previousSibling != null) {
+                //ویدیو
+                urls.push(img.previousSibling.getAttribute('src'));
+            }
+            postCallback(msg.callbackId, {
+                result: true,
+                urls: urls
+            });
+        } else {
+            clog('media not found');
+            postCallback(msg.callbackId, {
+                result: false
+            });
+        }
+    }
 };
 
 /**

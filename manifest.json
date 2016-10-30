@@ -18,7 +18,8 @@
     "webRequest",
     "webRequestBlocking",
     "storage",
-    "unlimitedStorage"
+    "unlimitedStorage",
+    "downloads"
   ],
     "background": {
         "persistent": true,
