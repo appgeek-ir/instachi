@@ -1,7 +1,4 @@
 /node_modules/
 /dist-debug/
 /dist/
-/dist/bg.js
-/dist/inject.js
-/dist/main.js
-/dist/popup.js
+/bg.js
