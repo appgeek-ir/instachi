@@ -185,10 +185,9 @@ var controller = {
             });
             a.click();
             checkPeriodically(function () {
-                return document.querySelector('div>div[role=dialog]>div:nth-child(2)>div>div:nth-child(2)>ul>li:last-child>div.spiSpinner') == null &&
-                    document.querySelectorAll('div>div[role=dialog]>div:nth-child(2)>div>div:nth-child(2)>ul>li').length > 0;
+                return query!=undefined;
             }, function (result) {
-                clog('condition is ok');
+                clog('condition is ok',query);
                 postCallback(msg.callbackId, {
                     result: result,
                     response: query

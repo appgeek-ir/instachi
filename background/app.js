@@ -187,15 +187,16 @@ function updateFollowHistory(tabId, history) {
                     });
                 } else {
                     // در صورت تغییر وضعیت زمان هم تغییر می کند
-                    if (item.status != history.status) {
-                        history.datetime = new Date().getTime();
-                    } else {
-                        if (item.datetime == undefined) {
-                            history.datetime = new Date().getTime();
-                        } else {
-                            history.datetime = item.datetime;
-                        }
-                    }
+                    history.datetime = new Date().getTime();
+                    //if (item.status != history.status) {
+                        
+                    //} else {
+                    //    if (item.datetime == undefined) {
+                    //        history.datetime = new Date().getTime();
+                    //    } else {
+                    //        history.datetime = item.datetime;
+                    //    }
+                    //}
 
                     db.followHistories.put(history).then(function () {
                         db.close();

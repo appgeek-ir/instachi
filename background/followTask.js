@@ -479,8 +479,10 @@ followTask.prototype.fetchFollowersFromList = function () {
             this.followFromFetchedUsers();
         }, this));
         this.state.currentPage = 1;
-        this.pipeline.register('openFollowers', {}, bind(this.fetchFollowersFromListCycle, this))
-            .start();
+		setTimeout(bind(function(){
+			this.pipeline.register('openFollowers', {}, bind(this.fetchFollowersFromListCycle, this))
+				.start();
+		},this),1000);
     }, this));
     this.tab.postMessage({
         action: 'gotoProfile',

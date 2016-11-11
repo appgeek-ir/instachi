@@ -223,13 +223,13 @@ unfollowTask.prototype.getProfileInfoResponse = function (pipeline, msg) {
                     pipeline.next();
                 } else {
                     clog('user currently follow me!');
-                    if (this.state.currentUser.status == followStatus.requested) {
+                    //if (this.state.currentUser.status == followStatus.requested) {
                         updateFollowHistory(this.tabId, {
                             id: msg.user.id,
                             username: msg.user.username,
                             status: followStatus.following
                         });
-                    }
+                    //}
                     pipeline.next(2);
                 }
             } else {
