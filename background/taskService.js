@@ -13,6 +13,9 @@ var taskService = {
             case 'Restore':
                 task = new restoreTask(args);
                 break;
+            case 'Like':
+                task = new likeTask(args);
+                break;
         }
         if (task === undefined) {
             return false;

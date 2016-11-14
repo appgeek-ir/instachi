@@ -81,14 +81,14 @@ var popupCtrl = {
         });
     },
     getCurrentTask: function (port, msg) {
-        clog('get current task', msg);
+        //clog('get current task', msg);
         chrome.tabs.query({
             active: true,
             currentWindow: true
         }, function (items) {
             if (items.length > 0) {
                 if (tabs[items[0].id].task != undefined) {
-                    clog('task found');
+                    //clog('task found');
                     port.postMessage({
                         action: 'callback.getCurrentTask',
                         result: true,

@@ -654,6 +654,110 @@ var controller = {
                 result: false
             });
         }
+    },
+
+    /**
+    * رفتن به صفحه اصلی
+    */
+    gotoFeedPage: function (args) {
+        document.body.scrollTop = 0;
+        window.location.href = 'https://www.instagram.com/';
+    },
+
+    getFeedPageInfo: function (msg) {
+        clog('get feed page info:', msg);
+        Execute(function (id) {
+            window.getSharedData(id);
+        }, function (result) {
+            //امکان وجود خطا
+            sharedData = JSON.parse(result);
+            postCallback(msg.callbackId, {
+                result: true,
+                feed: sharedData.entry_data.FeedPage[0].feed
+            });
+        });
+    },
+
+    loadMoreFeeds: function (msg) {
+        clog('load more feeds:', msg);
+
+        Execute(function (id) {
+            window.registerRequest(id, '/query/');
+        }, function (result) {
+            clog('load more feeds:', result);
+            var response = JSON.parse(result);
+            postCallback(msg.callbackId, {
+                result: true,
+                response: response
+            });
+        });
+
+        clog('load more by scroll down page');
+        setTimeout(function () {
+            document.body.scrollTop = document.body.scrollHeight;
+        }, 1000);
+    },
+     
+    /**
+    * لایک پست از صفحه فید
+    */
+    likeFromFeed: function (msg) {
+        clog('like from feed:', msg);
+        var a = document.querySelector('a[href="/p/' + msg.code + '/"]');
+        if (a != null) {
+            var like = a.parentElement.parentElement.querySelector('div:nth-child(3)>section:last-child>a');
+            if (like != null) {
+                like.parentElement.parentElement.parentElement.querySelector('a:nth-child(1)').focus();
+                Execute(function (id, args) {
+                    window.registerRequest(id, '/web/likes/' + args.postId + '/like/');
+                }, function (result) {
+                    //امکان وجود خطا
+                    clog('like completed:', result);
+                    query = JSON.parse(result);
+                    postCallback(msg.callbackId, {
+                        result: true,
+                        post: {
+                            id: msg.id,
+                            userId: msg.userId
+                        },
+                        response: query
+                    });
+                }, {
+                    postId: msg.id
+                });
+                like.click();
+            } else {
+                clog('like link not found');
+            }
+        } else {
+            clog('feed post not found');
+        }
+    },
+
+    /**
+    * حذف پست های صفحه فید 
+    */
+
+    removeFeedPosts: function (msg) {
+        clog('remove posts from feed:', msg);
+        setTimeout(function () {
+            document.body.scrollTop = 0;
+            var postContainer = document.querySelector('body>span>section:first-child>main>section:first-child>div:first-child>div:first-child');
+            if (postContainer != null) {
+                for (var i = 0; i < msg.count; i++) {
+                    var article = postContainer.querySelector('article:first-child');
+                    if (article != null) {
+                        clog('remove article!');
+                        article.remove();
+                    } else {
+                        break;
+                    }
+                }
+            }
+            postCallback(msg.callbackId, {
+                result: true
+            });
+        }, 1000);
     }
 };
 

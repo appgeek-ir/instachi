@@ -86,6 +86,7 @@ function clog() {
 // منوی اصلی
 var mainCtrl = {
     init: function () {
+        $('.loader').hide();
         postMessage({
             action: 'activationStatus'
         }, $.proxy(this.activationStatusReponse, mainCtrl));
@@ -125,7 +126,10 @@ var mainCtrl = {
     getCurrentTaskResponse: function(msg){
         clog('get task response:' , msg);
         $('.running-task').remove();
-        if(msg.result){
+        if (msg.result) {
+            if (msg.task.progress == 0) {
+                $('.loader').show();
+            }
             $('section#main').find('ul').hide();
 
             if(msg.task.waitUntil!=undefined){
@@ -140,7 +144,8 @@ var mainCtrl = {
             $(html).insertBefore('ul');
             $('#btn-stop').on('click',$.proxy(this.stopTask,this));
             setTimeout($.proxy(this.getCurrentTask,this),500);
-        }else{
+        } else {
+            $('.loader').hide();
             $('section#main').find('ul').show();
             $('section#main').find('a').on('click', function (e) {
                 e.preventDefault();
@@ -466,6 +471,45 @@ window['backupCtrl'] = {
         clog('do restore');
         this.createTask(this.data);
         delete this.data;
+    }
+
+}
+
+window['likeCtrl'] = {
+    init: function () {
+        showTemplate('like');
+        var $main = $('#main');
+
+        $main.find('a.button-return').on('click', function (e) {
+            e.preventDefault();
+            loadCtrl('mainCtrl');
+        });
+        $main.find('#btn-run').on('click', $.proxy(this.createTask, this));
+
+    },
+
+    createTask: function (e) {
+        e.preventDefault();
+        msg = {
+            action: 'createTask',
+            type: 'Like',
+            pattern: 'feeds',
+            days: parseInt($('#days').val()),
+            startType: 'auto',
+            speed: parseInt($('#speed').val())
+        };
+
+        clog('create like task request');
+        postMessage(msg, $.proxy(this.createTaskResponse, this));
+    },
+
+    createTaskResponse: function (msg) {
+        clog('create task response', msg);
+        if (msg.result) {
+            loadCtrl('mainCtrl');
+        } else {
+            error(msg.message);
+        }
     }
 
 }
